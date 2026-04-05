@@ -1,0 +1,93 @@
+{
+  "results": [
+    {
+      "sequence_name": "Ornek-Veri-1-RGB",
+      "status": "ok",
+      "evaluated_frames": 600,
+      "reference_frames": 240,
+      "estimated_frames": 360,
+      "reference_period_accuracy": 0.0,
+      "health0_drift_accumulation": 41.475918,
+      "health0_terminal_error": 85.366415,
+      "step_jump_count": 1,
+      "continuity_error": 0.28506,
+      "recovery_error_after_health_returns_to_1": 0.0,
+      "confidence_mean": 0.908067,
+      "confidence_min": 0.5804,
+      "fallback_rate": 0.0,
+      "branch_counts": {
+        "reference": 240,
+        "estimated": 360
+      }
+    },
+    {
+      "sequence_name": "Ornek-Veri-1-Termal",
+      "status": "ok",
+      "evaluated_frames": 600,
+      "reference_frames": 240,
+      "estimated_frames": 360,
+      "reference_period_accuracy": 0.0,
+      "health0_drift_accumulation": 56.825219,
+      "health0_terminal_error": 93.785379,
+      "step_jump_count": 1,
+      "continuity_error": 0.403271,
+      "recovery_error_after_health_returns_to_1": 0.0,
+      "confidence_mean": 0.945827,
+      "confidence_min": 0.7426,
+      "fallback_rate": 0.0,
+      "branch_counts": {
+        "reference": 240,
+        "estimated": 360
+      }
+    },
+    {
+      "sequence_name": "Ornek-Veri-2-RGB",
+      "status": "ok",
+      "evaluated_frames": 600,
+      "reference_frames": 240,
+      "estimated_frames": 360,
+      "reference_period_accuracy": 0.0,
+      "health0_drift_accumulation": 57.035649,
+      "health0_terminal_error": 93.465502,
+      "step_jump_count": 1,
+      "continuity_error": 0.403312,
+      "recovery_error_after_health_returns_to_1": 0.0,
+      "confidence_mean": 0.825553,
+      "confidence_min": 0.1509,
+      "fallback_rate": 0.15,
+      "branch_counts": {
+        "reference": 240,
+        "estimated": 360
+      }
+    },
+    {
+      "sequence_name": "Ornek-Veri-2-Termal",
+      "status": "ok",
+      "evaluated_frames": 600,
+      "reference_frames": 240,
+      "estimated_frames": 360,
+      "reference_period_accuracy": 0.0,
+      "health0_drift_accumulation": 41.938737,
+      "health0_terminal_error": 85.59847,
+      "step_jump_count": 1,
+      "continuity_error": 0.283983,
+      "recovery_error_after_health_returns_to_1": 0.0,
+      "confidence_mean": 0.840182,
+      "confidence_min": 0.1549,
+      "fallback_rate": 0.021667,
+      "branch_counts": {
+        "reference": 240,
+        "estimated": 360
+      }
+    }
+  ],
+  "aggregate": {
+    "sequence_count": 4,
+    "ok_count": 4,
+    "reference_period_accuracy": 0.0,
+    "health0_drift_accumulation": 49.318881,
+    "continuity_error": 0.343907,
+    "recovery_error_after_health_returns_to_1": 0.0,
+    "fallback_rate": 0.042917
+  }
+}

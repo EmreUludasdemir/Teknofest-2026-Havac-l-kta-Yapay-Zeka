@@ -1,0 +1,24 @@
+[task1]
+detector_backend = "yolo26n"
+model_runtime = "tensorrt"
+task1_device = "cuda:0"
+trt_precision = "fp16"
+trt_warmup_runs = 3
+onnx_conf_threshold_offset = 0.1
+runtime_order = [
+  "tensorrt:yolo26n",
+  "onnxruntime:yolo26n",
+  "ultralytics:yolo26n",
+  "onnxruntime:yolo11n",
+  "ultralytics:yolo11n",
+  "synthetic",
+]
+
+[paths]
+log_dir = "final_runtime/logs"
+cache_dir = "final_runtime/cache"
+manifest_path = "final_runtime/config/model_manifest.json"
+
+[smoke]
+default_mode = "batch"
+default_max_frames = 2

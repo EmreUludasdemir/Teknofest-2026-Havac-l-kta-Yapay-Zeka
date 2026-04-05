@@ -1,0 +1,57 @@
+# TEKNOFEST - GitHub'a kodu tasirken buyuk veri ve runtime coplerini disarida tut.
+
+# Yarisma / ornek veri setleri
+data/
+
+# Lokal loglar ve cache
+_logs/
+.mypy_cache/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Sanal ortamlar ve lokal arac klasorleri
+.venv/
+venv/
+env/
+.codex/
+.env
+.env.*
+
+# IDE / OS dosyalari
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
+
+# Runtime paketinin sadece config/README kismi repoya girsin
+final_runtime/logs/
+final_runtime/cache/
+final_runtime/artifacts/
+
+# Buyuk model / export artefactlari varsayilan olarak git'e girmez
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+
+# Export modelleri ve turetilmis metadata
+reports/export/models/
+
+# Buyuk veya tekrar uretilebilir medya / cikti dosyalari
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.zip
+*.tar
+*.7z
+
+# Gecici rapor loglari
+*.jsonl
+
+# Resmi dokumanlari repoda tutmak istemezsen ac
+# *.pdf

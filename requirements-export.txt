@@ -1,0 +1,4 @@
+# TEKNOFEST Faz 7 export bagimliliklari
+# Temel runtime ortamini sisirmemek icin ayrildi.
+onnx>=1.16,<2
+onnxruntime-gpu>=1.20,<2
