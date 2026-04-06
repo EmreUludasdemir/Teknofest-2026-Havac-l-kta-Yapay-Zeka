@@ -207,12 +207,17 @@ def build_task1_fallback_tree(
     stages: list[dict[str, Any]] = []
     for order_index, stage_name in enumerate(runtime_settings.task1_runtime_order, start=1):
         runtime_name, candidate_name = _parse_stage_name(stage_name)
+        production_enabled = not (
+            runtime_name == "onnxruntime"
+            and candidate_name == "yolo11n"
+        )
         stage_payload = {
             "order": order_index,
             "stage": stage_name,
             "runtime": runtime_name,
             "candidate": candidate_name,
             "validation_passed": validation_map.get(stage_name),
+            "production_enabled": production_enabled,
             "required_artifact": _required_artifact_name(runtime_name, candidate_name),
         }
         stages.append(stage_payload)
@@ -264,17 +269,18 @@ def render_task1_native_vs_onnx_vs_trt_report(payload: dict[str, Any]) -> str:
 
 def render_task1_fallback_tree_report(payload: dict[str, Any]) -> str:
     lines = [
-        "| Order | Stage | Runtime | Candidate | Validation Passed | Required Artifact |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| Order | Stage | Runtime | Candidate | Validation Passed | Production Enabled | Required Artifact |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     for stage in payload.get("stages", []):
         lines.append(
-            "| {order} | {stage} | {runtime} | {candidate} | {validation} | {artifact} |".format(
+            "| {order} | {stage} | {runtime} | {candidate} | {validation} | {enabled} | {artifact} |".format(
                 order=stage.get("order"),
                 stage=stage.get("stage"),
                 runtime=stage.get("runtime"),
                 candidate=stage.get("candidate"),
                 validation=stage.get("validation_passed"),
+                enabled=stage.get("production_enabled"),
                 artifact=stage.get("required_artifact"),
             )
         )

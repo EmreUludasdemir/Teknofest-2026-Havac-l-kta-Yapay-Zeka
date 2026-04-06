@@ -12,10 +12,8 @@ from src.task1.postprocess import deduplicate_detections
 from src.task1.tracker import Task1Tracker
 from src.task2.estimator import Task2Estimator
 from src.task2.health_logic import resolve_task2_translation
-from src.task3.matcher import Task3Matcher
-from src.task3.no_match_logic import filter_no_match_candidates
+from src.task3.pipeline import Task3Pipeline
 from src.task3.reference_cache import ReferenceCache
-from src.task3.verifier import verify_matches
 
 
 @dataclass(slots=True)
@@ -27,7 +25,7 @@ class MvpFrameProcessor:
     task1_tracker: Task1Tracker = field(init=False)
     task2_estimator: Task2Estimator = field(init=False)
     reference_cache: ReferenceCache = field(init=False)
-    task3_matcher: Task3Matcher = field(init=False)
+    task3_pipeline: Task3Pipeline = field(init=False)
     last_task1_dynamic_detections: list = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -39,9 +37,9 @@ class MvpFrameProcessor:
             self.runtime_settings.task3_reference_dir,
             orb_features=self.runtime_settings.task3_orb_features,
         )
-        self.task3_matcher = Task3Matcher(
-            reference_cache=self.reference_cache,
+        self.task3_pipeline = Task3Pipeline(
             runtime_settings=self.runtime_settings,
+            reference_cache=self.reference_cache,
         )
 
     def __call__(self, frame: FrameEnvelope, image_bytes: bytes) -> FrameResult:
@@ -106,25 +104,14 @@ class MvpFrameProcessor:
                 result.diagnostics["fallback_mode"] = "task1"
 
         try:
-            matches = self.task3_matcher.match(
+            matches, task3_info = self.task3_pipeline.process(
                 frame,
                 image_bytes,
-                self.reference_cache.list_ids(),
                 decoded_frame=decoded_frame,
-            )
-            matches = filter_no_match_candidates(
-                matches,
-                min_score=self.runtime_settings.task3_min_score,
-                ambiguity_margin=self.runtime_settings.task3_ambiguity_margin,
-            )
-            matches = verify_matches(
-                frame,
-                matches,
-                decoded_frame=decoded_frame,
-                min_inliers=self.runtime_settings.task3_match_min_inliers,
             )
             result.detected_undefined_objects.extend(matches)
             result.diagnostics["task3_status"] = "ok"
+            result.diagnostics["task3_info"] = task3_info
         except Exception as exc:
             result.detected_undefined_objects = []
             result.diagnostics["task3_status"] = "fallback"

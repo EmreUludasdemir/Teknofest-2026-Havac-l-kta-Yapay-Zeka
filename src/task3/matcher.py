@@ -114,6 +114,16 @@ class Task3Matcher:
 
         return self._placeholder_match(frame, available_ids)
 
+    def collect_proposals(
+        self,
+        decoded_frame: DecodedFrame,
+        reference_ids: list[str] | None = None,
+    ) -> list[CanonicalUndefinedObject]:
+        available_ids = reference_ids or self.reference_cache.list_ids()
+        if not available_ids or not is_cv2_available() or decoded_frame.gray is None:
+            return []
+        return self._collect_proposals(decoded_frame, available_ids)
+
     def _collect_proposals(
         self,
         decoded_frame: DecodedFrame,

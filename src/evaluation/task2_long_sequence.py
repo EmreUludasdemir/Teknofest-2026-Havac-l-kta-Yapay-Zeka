@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import shutil
+from dataclasses import replace
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import mean
@@ -162,6 +163,9 @@ def evaluate_records(
     previous_health: str | None = None
     last_health0_error: float | None = None
     branch_counts = {"reference": 0, "estimated": 0}
+    thermal_guard_frames = 0
+    hold_mode_frames = 0
+    sensor_hint_used_frames = 0
 
     evaluated_frames = 0
     for index, record in enumerate(records_list):
@@ -179,6 +183,12 @@ def evaluate_records(
         branch_counts["reference" if branch == "reference" else "estimated"] += 1
         if diagnostics.get("fallback_source") is not None or "fallback" in translation.source:
             fallback_count += 1
+        if diagnostics.get("thermal_guard_active"):
+            thermal_guard_frames += 1
+        if diagnostics.get("hold_mode_reason"):
+            hold_mode_frames += 1
+        if diagnostics.get("sensor_hint_used"):
+            sensor_hint_used_frames += 1
 
         if record.health_status == "1":
             reference_errors.append(error)
@@ -201,6 +211,7 @@ def evaluate_records(
         evaluated_frames += 1
     summary = {
         "sequence_name": sequence_name,
+        "modality": infer_modality(video_name),
         "status": "ok",
         "evaluated_frames": evaluated_frames,
         "reference_frames": branch_counts["reference"],
@@ -215,8 +226,118 @@ def evaluate_records(
         "confidence_min": round(min(confidence_values), 6) if confidence_values else 0.0,
         "fallback_rate": round(fallback_count / max(evaluated_frames, 1), 6),
         "branch_counts": branch_counts,
+        "phase9_stability": {
+            "thermal_guard_frames": thermal_guard_frames,
+            "hold_mode_frames": hold_mode_frames,
+            "sensor_hint_used_frames": sensor_hint_used_frames,
+        },
     }
     return summary
+
+
+def evaluate_task2_phase10_dress_rehearsal(
+    *,
+    runtime_settings: MvpRuntimeSettings | None = None,
+    root_dir: str | Path | None = None,
+    output_dir: str | Path = "reports",
+) -> dict[str, object]:
+    baseline_path = Path(output_dir) / "task2_long_sequence_summary.json"
+    baseline_payload = json.loads(baseline_path.read_text(encoding="utf-8")) if baseline_path.exists() else {}
+    settings = replace(
+        runtime_settings or MvpRuntimeSettings(),
+        task2_eval_frame_stride=2,
+        task2_eval_sequence_limit=(runtime_settings.task2_eval_sequence_limit if runtime_settings and runtime_settings.task2_eval_sequence_limit is not None else 600),
+    )
+    rehearsal_payload = evaluate_task2_long_sequences(
+        runtime_settings=settings,
+        root_dir=root_dir,
+        output_dir=output_dir,
+    )
+    thermal_results = [
+        item for item in rehearsal_payload.get("results", [])
+        if item.get("status") == "ok" and item.get("modality") == "thermal"
+    ]
+    thermal_aggregate = {
+        "sequence_count": len(thermal_results),
+        "health0_drift_accumulation": round(
+            _safe_mean(item.get("health0_drift_accumulation", 0.0) for item in thermal_results),
+            6,
+        ),
+        "continuity_error": round(
+            _safe_mean(item.get("continuity_error", 0.0) for item in thermal_results),
+            6,
+        ),
+        "recovery_error_after_health_returns_to_1": round(
+            _safe_mean(item.get("recovery_error_after_health_returns_to_1", 0.0) for item in thermal_results),
+            6,
+        ),
+        "thermal_guard_frames_mean": round(
+            _safe_mean(item.get("phase9_stability", {}).get("thermal_guard_frames", 0.0) for item in thermal_results),
+            6,
+        ),
+        "hold_mode_frames_mean": round(
+            _safe_mean(item.get("phase9_stability", {}).get("hold_mode_frames", 0.0) for item in thermal_results),
+            6,
+        ),
+        "sensor_hint_used_frames_mean": round(
+            _safe_mean(item.get("phase9_stability", {}).get("sensor_hint_used_frames", 0.0) for item in thermal_results),
+            6,
+        ),
+    }
+    assessment = assess_phase10_task2_stability(
+        baseline_payload.get("aggregate", {}),
+        rehearsal_payload.get("aggregate", {}),
+    )
+    payload = {
+        "baseline_reference": baseline_payload.get("aggregate", {}),
+        "rehearsal": rehearsal_payload,
+        "thermal_focus": thermal_aggregate,
+        "assessment": assessment,
+        "active_thresholds": {
+            "task2_phase_primary_response_min_thermal": settings.task2_phase_primary_response_min_thermal,
+            "task2_confidence_floor_thermal": settings.task2_confidence_floor_thermal,
+            "task2_sensor_hint_max_weight_thermal": settings.task2_sensor_hint_max_weight_thermal,
+            "task2_z_update_scale_thermal": settings.task2_z_update_scale_thermal,
+        },
+    }
+    output_path = Path(output_dir)
+    (output_path / "task2_phase10_dress_rehearsal.json").write_text(
+        json.dumps(payload, indent=2),
+        encoding="utf-8",
+    )
+    (output_path / "task2_phase10_dress_rehearsal.md").write_text(
+        render_task2_phase10_dress_rehearsal(payload),
+        encoding="utf-8",
+    )
+    return payload
+
+
+def assess_phase10_task2_stability(
+    baseline_aggregate: dict[str, object],
+    rehearsal_aggregate: dict[str, object],
+) -> dict[str, object]:
+    baseline_drift = float(baseline_aggregate.get("health0_drift_accumulation", 0.0) or 0.0)
+    rehearsal_drift = float(rehearsal_aggregate.get("health0_drift_accumulation", 0.0) or 0.0)
+    baseline_recovery = float(baseline_aggregate.get("recovery_error_after_health_returns_to_1", 0.0) or 0.0)
+    rehearsal_recovery = float(rehearsal_aggregate.get("recovery_error_after_health_returns_to_1", 0.0) or 0.0)
+    stability_improved = rehearsal_drift < baseline_drift and rehearsal_recovery <= (baseline_recovery + 0.25)
+    observability_active = bool(
+        float(rehearsal_aggregate.get("phase9_stability", {}).get("thermal_guard_frames_mean", 0.0) or 0.0) > 0.0
+        or float(rehearsal_aggregate.get("phase9_stability", {}).get("hold_mode_frames_mean", 0.0) or 0.0) > 0.0
+    )
+    if stability_improved and observability_active:
+        conclusion = "stability_and_observability"
+    elif observability_active:
+        conclusion = "observability_only"
+    else:
+        conclusion = "no_clear_gain"
+    return {
+        "baseline_drift": round(baseline_drift, 6),
+        "rehearsal_drift": round(rehearsal_drift, 6),
+        "baseline_recovery": round(baseline_recovery, 6),
+        "rehearsal_recovery": round(rehearsal_recovery, 6),
+        "conclusion": conclusion,
+    }
 
 
 def evaluate_task2_long_sequences(
@@ -268,6 +389,11 @@ def evaluate_task2_long_sequences(
             "continuity_error": round(_safe_mean(item.get("continuity_error", 0.0) for item in results if item.get("status") == "ok"), 6),
             "recovery_error_after_health_returns_to_1": round(_safe_mean(item.get("recovery_error_after_health_returns_to_1", 0.0) for item in results if item.get("status") == "ok"), 6),
             "fallback_rate": round(_safe_mean(item.get("fallback_rate", 0.0) for item in results if item.get("status") == "ok"), 6),
+            "phase9_stability": {
+                "thermal_guard_frames_mean": round(_safe_mean(item.get("phase9_stability", {}).get("thermal_guard_frames", 0.0) for item in results if item.get("status") == "ok"), 6),
+                "hold_mode_frames_mean": round(_safe_mean(item.get("phase9_stability", {}).get("hold_mode_frames", 0.0) for item in results if item.get("status") == "ok"), 6),
+                "sensor_hint_used_frames_mean": round(_safe_mean(item.get("phase9_stability", {}).get("sensor_hint_used_frames", 0.0) for item in results if item.get("status") == "ok"), 6),
+            },
         },
     }
     (output_path / "task2_long_sequence_summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -354,6 +480,38 @@ def render_task2_comparison(before: dict[str, object], after: dict[str, object])
         f"{round(float(after.get('fallback_rate', 0.0)) - float(before.get('fallback_rate', 0.0)), 6)} |\n"
         f"| Recovery Error | {before.get('recovery_error_after_health_returns_to_1', '-')} | {after.get('recovery_error_after_health_returns_to_1', '-')} | "
         f"{round(float(after.get('recovery_error_after_health_returns_to_1', 0.0)) - float(before.get('recovery_error_after_health_returns_to_1', 0.0)), 6)} |\n"
+    )
+
+
+def render_task2_phase10_dress_rehearsal(payload: dict[str, object]) -> str:
+    assessment = payload.get("assessment", {})
+    thermal = payload.get("thermal_focus", {})
+    rehearsal = payload.get("rehearsal", {}).get("aggregate", {})
+    baseline = payload.get("baseline_reference", {})
+    return (
+        "# Phase 10 Task 2 Dress Rehearsal\n\n"
+        f"- Stability conclusion: `{assessment.get('conclusion')}`\n"
+        f"- Baseline drift: `{assessment.get('baseline_drift')}`\n"
+        f"- Rehearsal drift: `{assessment.get('rehearsal_drift')}`\n"
+        f"- Baseline recovery: `{assessment.get('baseline_recovery')}`\n"
+        f"- Rehearsal recovery: `{assessment.get('rehearsal_recovery')}`\n\n"
+        "## Aggregate\n"
+        f"- Reference accuracy: `{rehearsal.get('reference_period_accuracy')}`\n"
+        f"- Health0 drift: `{rehearsal.get('health0_drift_accumulation')}`\n"
+        f"- Continuity error: `{rehearsal.get('continuity_error')}`\n"
+        f"- Recovery error: `{rehearsal.get('recovery_error_after_health_returns_to_1')}`\n"
+        f"- Fallback rate: `{rehearsal.get('fallback_rate')}`\n\n"
+        "## Thermal Focus\n"
+        f"- Sequence count: `{thermal.get('sequence_count')}`\n"
+        f"- Thermal drift: `{thermal.get('health0_drift_accumulation')}`\n"
+        f"- Thermal continuity: `{thermal.get('continuity_error')}`\n"
+        f"- Thermal recovery: `{thermal.get('recovery_error_after_health_returns_to_1')}`\n"
+        f"- Thermal guard frames mean: `{thermal.get('thermal_guard_frames_mean')}`\n"
+        f"- Hold-mode frames mean: `{thermal.get('hold_mode_frames_mean')}`\n"
+        f"- Sensor hint used frames mean: `{thermal.get('sensor_hint_used_frames_mean')}`\n\n"
+        "## Baseline Reference\n"
+        f"- Previous drift: `{baseline.get('health0_drift_accumulation')}`\n"
+        f"- Previous recovery: `{baseline.get('recovery_error_after_health_returns_to_1')}`\n"
     )
 
 

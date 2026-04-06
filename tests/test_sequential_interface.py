@@ -14,6 +14,7 @@ class SequentialInterfaceTests(unittest.TestCase):
         self.assertIsInstance(adapter, SequentialProtocolAdapter)
         self.assertEqual(adapter.url_open_session, "http://mock/session/open/")
         self.assertEqual(adapter.url_next_frame, "http://mock/session/next/")
+        self.assertEqual(adapter.settings.wire_profile, "official_current")
 
     def test_sequential_profile_overrides_paths_without_touching_batch_adapter(self) -> None:
         settings = SequentialProtocolSettings(

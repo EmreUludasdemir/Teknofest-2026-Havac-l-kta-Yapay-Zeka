@@ -26,6 +26,19 @@ def is_tensorrt_available() -> bool:
     return importlib.util.find_spec("tensorrt") is not None
 
 
+def resolve_gpu_name() -> str | None:
+    try:
+        import torch  # type: ignore[import-not-found]
+    except Exception:
+        return None
+    try:
+        if bool(torch.cuda.is_available()):
+            return str(torch.cuda.get_device_name(0))
+    except Exception:
+        return None
+    return None
+
+
 def build_task1_trt_export_spec(
     runtime_settings: MvpRuntimeSettings,
     *,
@@ -149,6 +162,7 @@ def export_task1_candidate_to_trt(
         "precision": built_precision,
         "workspace_mb": spec.workspace_mb,
         "builder_version": version_info["tensorrt_version"],
+        "gpu_name": resolve_gpu_name(),
         "runtime": "tensorrt",
         "class_names": class_names,
     }

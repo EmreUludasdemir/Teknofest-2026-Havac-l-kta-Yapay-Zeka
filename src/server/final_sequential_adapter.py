@@ -133,7 +133,7 @@ class FinalSequentialAdapter(SequentialProtocolAdapter):
         if not self.auth_token:
             self.login()
         if not self.session_id:
-            self.open_session()
+            raise ProtocolError("Sequential session acilmadan frame istenemez.")
         first_frame_wait = not self.warmup_completed
         if first_frame_wait and not self._warmup_wait_logged:
             self.logger.log_runtime(
@@ -182,7 +182,7 @@ class FinalSequentialAdapter(SequentialProtocolAdapter):
         if not self.warmup_completed:
             self.warmup_completed = True
             self.logger.log_runtime(
-                event="sequential_warmup_completed",
+                event="sequential_warmup_auto_completed",
                 adapter=type(self).__name__,
                 session_name=self.session_name,
                 frame_url=frame.frame_url,
@@ -237,6 +237,17 @@ class FinalSequentialAdapter(SequentialProtocolAdapter):
                     "translation_z": str(translation.translation_z),
                 }
             )
+        if self.settings.wire_profile == "draft_with_undefined":
+            payload["detected_undefined_objects"] = [
+                {
+                    "object_id": str(undefined_object.object_id),
+                    "top_left_x": str(undefined_object.top_left_x),
+                    "top_left_y": str(undefined_object.top_left_y),
+                    "bottom_right_x": str(undefined_object.bottom_right_x),
+                    "bottom_right_y": str(undefined_object.bottom_right_y),
+                }
+                for undefined_object in result.detected_undefined_objects
+            ]
         return payload
 
     def send_wire_prediction(self, payload: dict[str, Any]) -> HttpResponse:
@@ -291,6 +302,16 @@ class FinalSequentialAdapter(SequentialProtocolAdapter):
         self.session_name = None
         self.warmup_completed = False
         self._warmup_wait_logged = False
+
+    def mark_warmup_completed(self, diagnostics: dict[str, Any] | None = None) -> None:
+        self.warmup_completed = True
+        self._warmup_wait_logged = False
+        self.logger.log_runtime(
+            event="sequential_warmup_completed",
+            adapter=type(self).__name__,
+            session_name=self.session_name,
+            diagnostics=diagnostics or {},
+        )
 
     def _retry_request(
         self,

@@ -2,82 +2,106 @@
   "results": [
     {
       "sequence_name": "Ornek-Veri-1-RGB",
+      "modality": "rgb",
       "status": "ok",
-      "evaluated_frames": 600,
-      "reference_frames": 240,
-      "estimated_frames": 360,
+      "evaluated_frames": 5208,
+      "reference_frames": 900,
+      "estimated_frames": 4308,
       "reference_period_accuracy": 0.0,
-      "health0_drift_accumulation": 26.920071,
-      "health0_terminal_error": 65.363678,
+      "health0_drift_accumulation": 75.478809,
+      "health0_terminal_error": 71.190801,
       "step_jump_count": 1,
-      "continuity_error": 0.224443,
+      "continuity_error": 0.127194,
       "recovery_error_after_health_returns_to_1": 0.0,
-      "confidence_mean": 0.895928,
-      "confidence_min": 0.6479,
+      "confidence_mean": 0.860154,
+      "confidence_min": 0.6212,
       "fallback_rate": 0.0,
       "branch_counts": {
-        "reference": 240,
-        "estimated": 360
+        "reference": 900,
+        "estimated": 4308
+      },
+      "phase9_stability": {
+        "thermal_guard_frames": 0,
+        "hold_mode_frames": 0,
+        "sensor_hint_used_frames": 132
       }
     },
     {
       "sequence_name": "Ornek-Veri-1-Termal",
+      "modality": "thermal",
       "status": "ok",
-      "evaluated_frames": 600,
-      "reference_frames": 240,
-      "estimated_frames": 360,
+      "evaluated_frames": 5202,
+      "reference_frames": 900,
+      "estimated_frames": 4302,
       "reference_period_accuracy": 0.0,
-      "health0_drift_accumulation": 55.98015,
-      "health0_terminal_error": 91.89628,
+      "health0_drift_accumulation": 118.336965,
+      "health0_terminal_error": 151.960681,
       "step_jump_count": 1,
-      "continuity_error": 0.389302,
+      "continuity_error": 0.228907,
       "recovery_error_after_health_returns_to_1": 0.0,
-      "confidence_mean": 0.879409,
-      "confidence_min": 0.5525,
+      "confidence_mean": 0.859797,
+      "confidence_min": 0.5929,
       "fallback_rate": 0.0,
       "branch_counts": {
-        "reference": 240,
-        "estimated": 360
+        "reference": 900,
+        "estimated": 4302
+      },
+      "phase9_stability": {
+        "thermal_guard_frames": 4302,
+        "hold_mode_frames": 0,
+        "sensor_hint_used_frames": 103
       }
     },
     {
       "sequence_name": "Ornek-Veri-2-RGB",
+      "modality": "rgb",
       "status": "ok",
-      "evaluated_frames": 600,
-      "reference_frames": 240,
-      "estimated_frames": 360,
+      "evaluated_frames": 5208,
+      "reference_frames": 900,
+      "estimated_frames": 4308,
       "reference_period_accuracy": 0.0,
-      "health0_drift_accumulation": 41.983312,
-      "health0_terminal_error": 93.269022,
+      "health0_drift_accumulation": 115.965384,
+      "health0_terminal_error": 150.397118,
       "step_jump_count": 1,
-      "continuity_error": 0.364597,
+      "continuity_error": 0.227195,
       "recovery_error_after_health_returns_to_1": 0.0,
-      "confidence_mean": 0.928115,
-      "confidence_min": 0.6701,
+      "confidence_mean": 0.883423,
+      "confidence_min": 0.5092,
       "fallback_rate": 0.0,
       "branch_counts": {
-        "reference": 240,
-        "estimated": 360
+        "reference": 900,
+        "estimated": 4308
+      },
+      "phase9_stability": {
+        "thermal_guard_frames": 0,
+        "hold_mode_frames": 0,
+        "sensor_hint_used_frames": 134
       }
     },
     {
       "sequence_name": "Ornek-Veri-2-Termal",
+      "modality": "thermal",
       "status": "ok",
-      "evaluated_frames": 600,
-      "reference_frames": 240,
-      "estimated_frames": 360,
+      "evaluated_frames": 5202,
+      "reference_frames": 896,
+      "estimated_frames": 4306,
       "reference_period_accuracy": 0.0,
-      "health0_drift_accumulation": 27.176689,
-      "health0_terminal_error": 65.605594,
+      "health0_drift_accumulation": 74.535033,
+      "health0_terminal_error": 68.754731,
       "step_jump_count": 1,
-      "continuity_error": 0.224363,
+      "continuity_error": 0.129078,
       "recovery_error_after_health_returns_to_1": 0.0,
-      "confidence_mean": 0.886652,
-      "confidence_min": 0.6109,
+      "confidence_mean": 0.831685,
+      "confidence_min": 0.479,
       "fallback_rate": 0.0,
       "branch_counts": {
-        "reference": 240,
-        "estimated": 360
+        "reference": 896,
+        "estimated": 4306
+      },
+      "phase9_stability": {
+        "thermal_guard_frames": 4306,
+        "hold_mode_frames": 0,
+        "sensor_hint_used_frames": 137
       }
     }
   ],
@@ -85,9 +109,14 @@
     "sequence_count": 4,
     "ok_count": 4,
     "reference_period_accuracy": 0.0,
-    "health0_drift_accumulation": 38.015056,
-    "continuity_error": 0.300676,
+    "health0_drift_accumulation": 96.079048,
+    "continuity_error": 0.178094,
     "recovery_error_after_health_returns_to_1": 0.0,
-    "fallback_rate": 0.0
+    "fallback_rate": 0.0,
+    "phase9_stability": {
+      "thermal_guard_frames_mean": 2152.0,
+      "hold_mode_frames_mean": 0.0,
+      "sensor_hint_used_frames_mean": 126.5
+    }
   }
 }

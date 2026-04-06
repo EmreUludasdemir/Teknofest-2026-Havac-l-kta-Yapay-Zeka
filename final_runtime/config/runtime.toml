@@ -1,18 +1,48 @@
+[server]
+base_url = "http://127.0.0.1:5000/"
+username = "team"
+password = "password"
+request_timeout_s = 5.0
+image_timeout_s = 10.0
+
+[runtime]
+mode = "sequential"
+profile_name = "competition_runtime"
+wire_style = "teknofest_v1"
+first_frame_failure_policy = "retry_same_frame_then_graceful_degrade"
+warmup_timeout_s = 3.0
+first_frame_timeout_s = 5.0
+max_retries = 2
+backoff_s = 0.25
+
+[sequential]
+wire_profile = "official_current"
+# Gerekirse draft profil acilabilir: draft_with_undefined
+
 [task1]
 detector_backend = "yolo26n"
 model_runtime = "tensorrt"
 task1_device = "cuda:0"
 trt_precision = "fp16"
-trt_warmup_runs = 3
 onnx_conf_threshold_offset = 0.1
 runtime_order = [
   "tensorrt:yolo26n",
   "onnxruntime:yolo26n",
   "ultralytics:yolo26n",
-  "onnxruntime:yolo11n",
   "ultralytics:yolo11n",
   "synthetic",
 ]
+
+[warmup]
+task1_trt_warmup_runs = 3
+task1_onnx_warmup_runs = 1
+task1_native_warmup_runs = 1
+
+[task2]
+phase_primary_response_min_thermal = 0.45
+confidence_floor_thermal = 0.4
+sensor_hint_max_weight_thermal = 0.15
+z_update_scale_thermal = 0.0
 
 [paths]
 log_dir = "final_runtime/logs"
@@ -20,5 +50,5 @@ cache_dir = "final_runtime/cache"
 manifest_path = "final_runtime/config/model_manifest.json"
 
 [smoke]
-default_mode = "batch"
+default_mode = "sequential"
 default_max_frames = 2

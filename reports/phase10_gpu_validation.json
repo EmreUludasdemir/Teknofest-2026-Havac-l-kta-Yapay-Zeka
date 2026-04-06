@@ -1,0 +1,308 @@
+{
+  "machine": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python_executable": "C:\\Users\\Emre\\.venvs\\teknofest-gpu\\Scripts\\python.exe"
+  },
+  "preflight": {
+    "torch": {
+      "available": true,
+      "cuda_available": true,
+      "version": "2.11.0+cu128",
+      "device_count": 1,
+      "gpu_name": "NVIDIA GeForce RTX 5060 Laptop GPU"
+    },
+    "onnxruntime": {
+      "available": true,
+      "version": "1.24.4",
+      "providers": [
+        "TensorrtExecutionProvider",
+        "CUDAExecutionProvider",
+        "CPUExecutionProvider"
+      ]
+    },
+    "tensorrt": {
+      "available": true,
+      "version": "10.16.0.72"
+    },
+    "gpu_query": {
+      "available": true,
+      "name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+      "memory_total_mb": 8151.0
+    },
+    "vram_snapshot": {
+      "available": true,
+      "used_mb": 2685.0,
+      "total_mb": 8151.0,
+      "raw_output": "2685, 8151",
+      "error": null
+    },
+    "required_paths": {
+      "yolo26n_pt": {
+        "path": "C:\\Users\\Emre\\.teknofest_models\\yolo26n.pt",
+        "exists": true
+      },
+      "yolo26n_onnx": {
+        "path": "final_runtime\\artifacts\\onnx\\yolo26n.onnx",
+        "exists": true
+      },
+      "yolo26n_trt": {
+        "path": "final_runtime\\artifacts\\trt\\yolo26n.engine",
+        "exists": true
+      }
+    }
+  },
+  "trt_rebuild": {
+    "engine_path": "final_runtime\\artifacts\\trt\\yolo26n.engine",
+    "metadata_path": "final_runtime\\artifacts\\trt\\yolo26n.engine.metadata.json",
+    "mismatch_reasons": [],
+    "metadata": {
+      "candidate_name": "yolo26n",
+      "source_onnx_path": "final_runtime\\artifacts\\onnx\\yolo26n.onnx",
+      "output_engine_path": "final_runtime\\artifacts\\trt\\yolo26n.engine",
+      "input_shape": [
+        1,
+        3,
+        640,
+        640
+      ],
+      "precision": "fp16",
+      "workspace_mb": 1024,
+      "builder_version": "10.16.0.72",
+      "gpu_name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+      "runtime": "tensorrt",
+      "class_names": [
+        "person",
+        "bicycle",
+        "car",
+        "motorcycle",
+        "airplane",
+        "bus",
+        "train",
+        "truck",
+        "boat",
+        "traffic light",
+        "fire hydrant",
+        "stop sign",
+        "parking meter",
+        "bench",
+        "bird",
+        "cat",
+        "dog",
+        "horse",
+        "sheep",
+        "cow",
+        "elephant",
+        "bear",
+        "zebra",
+        "giraffe",
+        "backpack",
+        "umbrella",
+        "handbag",
+        "tie",
+        "suitcase",
+        "frisbee",
+        "skis",
+        "snowboard",
+        "sports ball",
+        "kite",
+        "baseball bat",
+        "baseball glove",
+        "skateboard",
+        "surfboard",
+        "tennis racket",
+        "bottle",
+        "wine glass",
+        "cup",
+        "fork",
+        "knife",
+        "spoon",
+        "bowl",
+        "banana",
+        "apple",
+        "sandwich",
+        "orange",
+        "broccoli",
+        "carrot",
+        "hot dog",
+        "pizza",
+        "donut",
+        "cake",
+        "chair",
+        "couch",
+        "potted plant",
+        "bed",
+        "dining table",
+        "toilet",
+        "tv",
+        "laptop",
+        "mouse",
+        "remote",
+        "keyboard",
+        "cell phone",
+        "microwave",
+        "oven",
+        "toaster",
+        "sink",
+        "refrigerator",
+        "book",
+        "clock",
+        "vase",
+        "scissors",
+        "teddy bear",
+        "hair drier",
+        "toothbrush"
+      ]
+    },
+    "rebuild_attempted": false,
+    "rebuild_result": null
+  },
+  "primary_run": {
+    "session_id": "seq-1775393026973",
+    "session_name": "mock_session",
+    "warmup": {
+      "active_task1_stage": "tensorrt:yolo26n",
+      "reference_cache_size": 6,
+      "task2_calibration_path": "C:\\TEKNOFEST\\data\\THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001\\THYZ_2026_Ornek_Veri_Seti\\Kamera_Kalibrasyon_Parametreleri_2026.txt",
+      "warmup_runs": 3,
+      "attempted_stages": [
+        "tensorrt:yolo26n"
+      ],
+      "failed_stages": []
+    },
+    "processed_frames": 3,
+    "frame_results": [
+      {
+        "frame_url": "http://127.0.0.1:50810/frames/1/",
+        "frame_id": 1,
+        "fetch_latency_ms": 4.216,
+        "process_latency_ms": 31.954,
+        "total_latency_ms": 39.8,
+        "status_code": 201,
+        "active_task1_stage": "tensorrt:yolo26n",
+        "active_provider": "TensorRT",
+        "task2_diagnostics": {
+          "task2_branch": "reference",
+          "health_status": "1",
+          "drift_clamped": false,
+          "confidence": 1.0,
+          "calibration_modality": "rgb"
+        }
+      },
+      {
+        "frame_url": "http://127.0.0.1:50810/frames/2/",
+        "frame_id": 2,
+        "fetch_latency_ms": 6.176,
+        "process_latency_ms": 41.942,
+        "total_latency_ms": 54.142,
+        "status_code": 201,
+        "active_task1_stage": "tensorrt:yolo26n",
+        "active_provider": "TensorRT",
+        "task2_diagnostics": {
+          "task2_branch": "reference",
+          "health_status": "1",
+          "drift_clamped": false,
+          "confidence": 1.0,
+          "calibration_modality": "rgb"
+        }
+      },
+      {
+        "frame_url": "http://127.0.0.1:50810/frames/3/",
+        "frame_id": 3,
+        "fetch_latency_ms": 3.669,
+        "process_latency_ms": 69.706,
+        "total_latency_ms": 73.929,
+        "status_code": 201,
+        "active_task1_stage": "tensorrt:yolo26n",
+        "active_provider": "TensorRT",
+        "task2_diagnostics": {
+          "estimator_branch": "predicted",
+          "used_last_velocity": true,
+          "frame_index": 3,
+          "calibration_modality": "rgb",
+          "health_epoch": 1,
+          "health0_frame_count": 1,
+          "health_window_id": 1,
+          "phase_response": 0.9507,
+          "phase_primary": true,
+          "flow_primary": true,
+          "hold_mode_reason": null,
+          "thermal_guard_active": false,
+          "fusion_weights": [
+            0.28,
+            0.12,
+            0.6
+          ],
+          "anchor_refreshed": false,
+          "mask_coverage_ok": true,
+          "mask_coverage_ratio": 1.0,
+          "masked_boxes": 0,
+          "point_count": 32,
+          "confidence": 0.6778,
+          "sensor_hint_seen": true,
+          "sensor_hint_used": true,
+          "sensor_hint_weight": 0.3983,
+          "drift_clamped": false,
+          "long_drift_clamped": false,
+          "anchor_distance_clamped": false,
+          "estimation_mode": "phase_fusion",
+          "fallback_source": null,
+          "task2_branch": "estimated",
+          "health_status": "0"
+        }
+      }
+    ],
+    "active_task1_stage": "tensorrt:yolo26n",
+    "active_provider": "TensorRT",
+    "first_frame_total_latency_ms": 39.8,
+    "warm_total_latency_p50_ms": 64.0355,
+    "warm_total_latency_p95_ms": 73.929,
+    "peak_vram_mb": 2912.0
+  },
+  "fallback_probes": [
+    {
+      "probe_name": "trt_unavailable_probe",
+      "disabled_stages": [
+        "tensorrt:yolo26n"
+      ],
+      "selected_stage": "onnxruntime:yolo26n",
+      "selected_provider": "CUDAExecutionProvider",
+      "warmup": {
+        "active_task1_stage": "onnxruntime:yolo26n",
+        "reference_cache_size": 6,
+        "task2_calibration_path": "C:\\TEKNOFEST\\data\\THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001\\THYZ_2026_Ornek_Veri_Seti\\Kamera_Kalibrasyon_Parametreleri_2026.txt",
+        "warmup_runs": 1,
+        "attempted_stages": [
+          "onnxruntime:yolo26n"
+        ],
+        "failed_stages": []
+      }
+    },
+    {
+      "probe_name": "trt_onnx_unavailable_probe",
+      "disabled_stages": [
+        "onnxruntime:yolo26n",
+        "tensorrt:yolo26n"
+      ],
+      "selected_stage": "ultralytics:yolo26n",
+      "selected_provider": "cuda:0",
+      "warmup": {
+        "active_task1_stage": "ultralytics:yolo26n",
+        "reference_cache_size": 6,
+        "task2_calibration_path": "C:\\TEKNOFEST\\data\\THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001\\THYZ_2026_Ornek_Veri_Seti\\Kamera_Kalibrasyon_Parametreleri_2026.txt",
+        "warmup_runs": 1,
+        "attempted_stages": [
+          "ultralytics:yolo26n"
+        ],
+        "failed_stages": []
+      }
+    }
+  ],
+  "decision": {
+    "gpu_path_exercised": true,
+    "selected_backend": "tensorrt:yolo26n",
+    "selected_provider": "TensorRT",
+    "first_frame_regression": false,
+    "no_go_reason": null,
+    "accepted": true
+  }
+}

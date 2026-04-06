@@ -96,7 +96,7 @@ def render_export_readiness(payload: dict[str, Any]) -> str:
     ]
     blockers = payload.get("blockers", [])
     if not blockers:
-        lines.append("- Yok. ONNX hazirligina gecilebilir.")
+        lines.append("- Yok. Production runtime tree validated ve export kapanisi alinabilir.")
     else:
         for blocker in blockers:
             lines.append(f"- {blocker}")

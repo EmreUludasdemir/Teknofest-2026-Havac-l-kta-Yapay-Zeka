@@ -1,0 +1,7 @@
+# TEKNOFEST Faz 9 production runtime bagimliliklari
+# Hedef ortam: Windows 11 + Python 3.10.x + RTX 5060 Laptop GPU
+opencv-python-headless>=4.10,<5
+ultralytics>=8.4,<9
+timm>=1.0,<2
+onnxruntime-gpu>=1.20,<2
+# TensorRT Python paketi CUDA surumune gore vendor wheel ile kurulur.

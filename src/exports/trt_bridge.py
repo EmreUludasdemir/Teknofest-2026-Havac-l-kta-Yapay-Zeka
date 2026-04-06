@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from src.core.frame_state import CanonicalDetection, DecodedFrame
 from src.exports.onnx_bridge import (
     decode_yolo_onnx_outputs,
-    load_onnx_metadata,
     preprocess_task1_onnx_input,
 )
 
@@ -36,16 +35,20 @@ class TensorRtTask1Bridge:
     max_objects_per_frame: int
     warmup_runs: int = 3
     logger_name: str = "TensorRtTask1Bridge"
+    metadata: dict[str, Any] = field(init=False)
+    engine: Any | None = field(init=False, default=None)
+    runtime: Any | None = field(init=False, default=None)
+    context: Any | None = field(init=False, default=None)
+    provider_name: str = field(init=False, default="TensorRT")
+    _io_names: dict[str, list[str]] = field(
+        init=False,
+        default_factory=lambda: {"inputs": [], "outputs": []},
+    )
 
     def __post_init__(self) -> None:
         self.engine_path = Path(self.engine_path)
         self.metadata_path = Path(self.metadata_path)
-        self.metadata = load_onnx_metadata(self.metadata_path)
-        self.engine = None
-        self.runtime = None
-        self.context = None
-        self.provider_name = "TensorRT"
-        self._io_names: dict[str, list[str]] = {"inputs": [], "outputs": []}
+        self.metadata = load_trt_metadata(self.metadata_path)
 
     def load(self) -> None:
         if self.context is not None:

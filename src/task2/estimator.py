@@ -118,6 +118,27 @@ class Task2Estimator:
 
         current_profile = select_calibration_profile(self.calibration_bundle, frame, decoded_frame)
         self.last_calibration_profile = current_profile
+        thermal_guard_active = current_profile.modality == "thermal"
+        phase_primary_response_min = (
+            self.runtime_settings.task2_phase_primary_response_min_thermal
+            if thermal_guard_active
+            else self.runtime_settings.task2_phase_primary_response_min
+        )
+        confidence_floor = (
+            self.runtime_settings.task2_confidence_floor_thermal
+            if thermal_guard_active
+            else self.runtime_settings.task2_confidence_floor
+        )
+        z_update_scale = (
+            self.runtime_settings.task2_z_update_scale_thermal
+            if thermal_guard_active
+            else self.runtime_settings.task2_z_update_scale
+        )
+        sensor_hint_max_weight = (
+            self.runtime_settings.task2_sensor_hint_max_weight_thermal
+            if thermal_guard_active
+            else 0.50
+        )
         base_output = self.last_output_translation or self.last_reliable_translation
         anchor_translation = self.anchor_translation or self.last_reliable_translation or self.last_output_translation
         sensor_hint = CanonicalTranslation(
@@ -137,6 +158,12 @@ class Task2Estimator:
                 "calibration_modality": current_profile.modality,
                 "health_epoch": self.health_epoch,
                 "health0_frame_count": self.health0_frame_count,
+                "health_window_id": self.health_epoch,
+                "hold_mode_reason": "missing_anchor_state",
+                "thermal_guard_active": thermal_guard_active,
+                "sensor_hint_seen": True,
+                "sensor_hint_used": False,
+                "sensor_hint_weight": 0.0,
             }
 
         if (
@@ -149,8 +176,8 @@ class Task2Estimator:
                 self.last_output_translation,
                 self.last_reliable_translation,
                 anchor_translation=anchor_translation,
-                confidence=min(self.last_confidence, self.runtime_settings.task2_confidence_floor * 0.5),
-                confidence_floor=self.runtime_settings.task2_confidence_floor,
+                confidence=min(self.last_confidence, confidence_floor * 0.5),
+                confidence_floor=confidence_floor,
                 estimation_mode="hold_mode_modality_mismatch",
                 mask_coverage_ok=False,
                 max_step_xy=self.runtime_settings.task2_max_step_xy,
@@ -168,6 +195,12 @@ class Task2Estimator:
                     "calibration_modality": current_profile.modality,
                     "health_epoch": self.health_epoch,
                     "health0_frame_count": self.health0_frame_count,
+                    "health_window_id": self.health_epoch,
+                    "hold_mode_reason": "modality_mismatch",
+                    "thermal_guard_active": thermal_guard_active,
+                    "sensor_hint_seen": True,
+                    "sensor_hint_used": False,
+                    "sensor_hint_weight": 0.0,
                     "anchor_refreshed": False,
                 }
             )
@@ -191,6 +224,7 @@ class Task2Estimator:
             shift_y=phase_y,
             calibration_profile=current_profile,
             z_confidence=phase_response,
+            z_update_scale=z_update_scale,
         )
         incremental_abs = self._absolute_from_increment(
             base_output,
@@ -200,17 +234,19 @@ class Task2Estimator:
             shift_y=flow_y,
             calibration_profile=current_profile,
             z_confidence=flow_confidence,
+            z_update_scale=z_update_scale,
         )
         velocity_prior = self._build_velocity_prior(base_output)
 
         phase_motion_strength = self._motion_strength(phase_x, phase_y)
         flow_motion_strength = self._motion_strength(flow_x, flow_y)
-        phase_primary = phase_response >= self.runtime_settings.task2_phase_primary_response_min and mask_coverage_ok
+        phase_primary = phase_response >= phase_primary_response_min and mask_coverage_ok
         flow_primary = flow_point_count >= self.runtime_settings.task2_flow_primary_points
         flow_recoverable = (
             flow_point_count >= self.runtime_settings.task2_flow_min_points and flow_confidence > 0.0
         )
         estimation_mode = "hold_mode"
+        hold_mode_reason = "weak_visual_signal"
         weights = self._normalize_weights(0.30, 0.35, 0.35)
         confidence = max(min(self.last_confidence * 0.45, 0.22), 0.08)
         candidate = self._blend_states(
@@ -223,6 +259,7 @@ class Task2Estimator:
 
         if phase_primary:
             estimation_mode = "phase_fusion"
+            hold_mode_reason = None
             phase_weight = 0.28 + (0.30 * phase_motion_strength)
             flow_weight = 0.12 + (0.15 * flow_motion_strength)
             velocity_weight = 1.0 - phase_weight - flow_weight
@@ -243,6 +280,7 @@ class Task2Estimator:
             )
         elif flow_primary or (not phase_primary and flow_recoverable):
             estimation_mode = "lucas_kanade"
+            hold_mode_reason = None
             phase_weight = 0.12 + (0.15 * phase_motion_strength)
             flow_weight = 0.35 + (0.30 * flow_motion_strength)
             velocity_weight = 1.0 - phase_weight - flow_weight
@@ -261,6 +299,8 @@ class Task2Estimator:
                 weights=weights,
                 source="task2_estimated",
             )
+        elif thermal_guard_active:
+            hold_mode_reason = "thermal_low_response"
 
         candidate, sensor_hint_info = self._apply_sensor_hint(
             candidate,
@@ -268,6 +308,7 @@ class Task2Estimator:
             base_output=base_output,
             anchor_translation=anchor_translation,
             confidence=confidence,
+            max_hint_weight=sensor_hint_max_weight,
         )
 
         guarded, guard_info = apply_drift_guard(
@@ -276,7 +317,7 @@ class Task2Estimator:
             self.last_reliable_translation,
             anchor_translation=anchor_translation,
             confidence=confidence,
-            confidence_floor=self.runtime_settings.task2_confidence_floor,
+            confidence_floor=confidence_floor,
             estimation_mode=estimation_mode,
             mask_coverage_ok=mask_coverage_ok,
             max_step_xy=self.runtime_settings.task2_max_step_xy,
@@ -313,9 +354,12 @@ class Task2Estimator:
             "calibration_modality": current_profile.modality,
             "health_epoch": self.health_epoch,
             "health0_frame_count": self.health0_frame_count,
+            "health_window_id": self.health_epoch,
             "phase_response": round(float(phase_response), 4),
             "phase_primary": phase_primary,
             "flow_primary": flow_primary,
+            "hold_mode_reason": hold_mode_reason,
+            "thermal_guard_active": thermal_guard_active,
             "fusion_weights": [round(float(item), 3) for item in weights],
             "anchor_refreshed": anchor_refreshed,
         }
@@ -335,6 +379,7 @@ class Task2Estimator:
         shift_y: float,
         calibration_profile: CameraCalibrationProfile,
         z_confidence: float,
+        z_update_scale: float,
     ) -> CanonicalTranslation:
         delta_x, delta_y = pixel_shift_to_translation_delta(
             shift_x,
@@ -342,7 +387,7 @@ class Task2Estimator:
             reference_z=anchor_translation.translation_z,
             profile=calibration_profile,
         )
-        z_signal = self._estimate_z_delta(anchor_frame, decoded_frame) * self.runtime_settings.task2_z_update_scale * clamp_ratio(z_confidence)
+        z_signal = self._estimate_z_delta(anchor_frame, decoded_frame) * z_update_scale * clamp_ratio(z_confidence)
         return CanonicalTranslation(
             translation_x=anchor_translation.translation_x + delta_x,
             translation_y=anchor_translation.translation_y + delta_y,
@@ -360,6 +405,7 @@ class Task2Estimator:
         shift_y: float,
         calibration_profile: CameraCalibrationProfile,
         z_confidence: float,
+        z_update_scale: float,
     ) -> CanonicalTranslation:
         delta_x, delta_y = pixel_shift_to_translation_delta(
             shift_x,
@@ -367,7 +413,7 @@ class Task2Estimator:
             reference_z=base_output.translation_z,
             profile=calibration_profile,
         )
-        z_signal = self._estimate_z_delta(previous_frame, decoded_frame) * self.runtime_settings.task2_z_update_scale * clamp_ratio(z_confidence)
+        z_signal = self._estimate_z_delta(previous_frame, decoded_frame) * z_update_scale * clamp_ratio(z_confidence)
         return CanonicalTranslation(
             translation_x=base_output.translation_x + delta_x,
             translation_y=base_output.translation_y + delta_y,
@@ -444,6 +490,7 @@ class Task2Estimator:
         base_output: CanonicalTranslation,
         anchor_translation: CanonicalTranslation,
         confidence: float,
+        max_hint_weight: float,
     ) -> tuple[CanonicalTranslation, dict[str, object]]:
         candidate_distance = self._translation_distance(candidate, sensor_hint)
         base_distance = self._translation_distance(base_output, sensor_hint)
@@ -453,9 +500,10 @@ class Task2Estimator:
             hint_weight = 0.35 + (0.15 * (1.0 - confidence))
         elif candidate_distance <= 6.0 and base_distance <= 10.0:
             hint_weight = 0.2 + (0.10 * (1.0 - confidence))
+        hint_weight = min(hint_weight, max_hint_weight)
 
         if hint_weight <= 0.0:
-            return candidate, {"sensor_hint_used": False, "sensor_hint_weight": 0.0}
+            return candidate, {"sensor_hint_seen": True, "sensor_hint_used": False, "sensor_hint_weight": 0.0}
 
         blended = CanonicalTranslation(
             translation_x=(candidate.translation_x * (1.0 - hint_weight)) + (sensor_hint.translation_x * hint_weight),
@@ -464,6 +512,7 @@ class Task2Estimator:
             source=candidate.source,
         )
         return blended, {
+            "sensor_hint_seen": True,
             "sensor_hint_used": True,
             "sensor_hint_weight": round(float(hint_weight), 4),
         }

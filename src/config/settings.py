@@ -21,6 +21,10 @@ def _default_task1_export_dir() -> Path:
     return _project_root() / "reports" / "export" / "models"
 
 
+def _default_task3_experimental_model_path() -> Path:
+    return Path.home() / ".teknofest_models" / "task3" / "yoloe-11s-seg.pt"
+
+
 @dataclass(slots=True)
 class OfficialRepoSettings:
     """Resmi repo uyumlu adapter ayarlari."""
@@ -52,6 +56,7 @@ class SequentialProtocolSettings:
     image_timeout_s: float = 10.0
     profile_name: str = "default"
     wire_style: str = "teknofest_v1"
+    wire_profile: str = "official_current"
     path_overrides: dict[str, str] = field(default_factory=dict)
     timeout_policy: dict[str, float] = field(default_factory=dict)
     retry_policy: dict[str, Any] = field(default_factory=lambda: {"max_retries": 2, "backoff_s": 0.25})
@@ -103,24 +108,28 @@ class MvpRuntimeSettings:
     task1_candidate_paths: dict[str, str] = field(default_factory=dict)
     task1_onnx_path: Path | None = None
     task1_onnx_candidate_paths: dict[str, str] = field(default_factory=dict)
+    task1_onnx_metadata_candidate_paths: dict[str, str] = field(default_factory=dict)
     task1_onnx_providers: list[str] = field(
         default_factory=lambda: ["CUDAExecutionProvider", "CPUExecutionProvider"]
     )
     task1_onnx_conf_threshold_offset: float = 0.10
+    task1_onnx_warmup_runs: int = 1
     task1_trt_path: Path | None = None
     task1_trt_candidate_paths: dict[str, str] = field(default_factory=dict)
+    task1_trt_metadata_candidate_paths: dict[str, str] = field(default_factory=dict)
     task1_trt_precision: str = "fp16"
     task1_trt_fallback_precision: str = "fp32"
     task1_trt_workspace_mb: int = 1024
     task1_trt_warmup_runs: int = 3
     task1_trt_max_vram_mb: float = 6500.0
     task1_trt_input_shape: tuple[int, int, int, int] = (1, 3, 640, 640)
+    task1_native_warmup_runs: int = 1
+    task1_enabled_stage_ids: list[str] = field(default_factory=list)
     task1_runtime_order: list[str] = field(
         default_factory=lambda: [
             "tensorrt:yolo26n",
             "onnxruntime:yolo26n",
             "ultralytics:yolo26n",
-            "onnxruntime:yolo11n",
             "ultralytics:yolo11n",
             "synthetic",
         ]
@@ -134,9 +143,11 @@ class MvpRuntimeSettings:
     task2_calibration_path: Path = field(default_factory=_default_calibration_path)
     task2_phase_response_min: float = 0.15
     task2_phase_primary_response_min: float = 0.35
+    task2_phase_primary_response_min_thermal: float = 0.45
     task2_flow_min_points: int = 4
     task2_flow_primary_points: int = 12
     task2_confidence_floor: float = 0.30
+    task2_confidence_floor_thermal: float = 0.40
     task2_long_drift_limit: float = 4.0
     task2_max_step_xy: float = 5.0
     task2_max_step_z: float = 2.0
@@ -144,9 +155,11 @@ class MvpRuntimeSettings:
     task2_anchor_refresh_confidence: float = 0.70
     task2_velocity_decay: float = 0.35
     task2_z_update_scale: float = 0.08
+    task2_z_update_scale_thermal: float = 0.0
     task2_hold_mode_velocity_weight: float = 0.10
     task2_anchor_distance_limit_xy: float = 10.0
     task2_anchor_distance_limit_z: float = 4.0
+    task2_sensor_hint_max_weight_thermal: float = 0.15
     task2_eval_frame_stride: int = 4
     task2_eval_sequence_limit: int | None = None
     task3_reference_dir: Path = field(default_factory=_default_reference_dir)
@@ -164,6 +177,23 @@ class MvpRuntimeSettings:
     task3_learned_pretrained: bool = True
     task3_min_score: float = 0.70
     task3_ambiguity_margin: float = 0.05
+    task3_experimental_enabled: bool = False
+    task3_experimental_mode: str = "baseline"
+    task3_experimental_tracking: str = "off"
+    task3_experimental_verifier: str = "off"
+    task3_experimental_tiled_inference: bool = False
+    task3_experimental_multiscale: bool = False
+    task3_experimental_fullframe_redetect_every_n: int = 8
+    task3_experimental_verify_min_matches: int = 6
+    task3_experimental_detector_confidence: float = 0.30
+    task3_experimental_prompt_confidence: float = 0.55
+    task3_experimental_enable_cross_sensor_guard: bool = True
+    task3_experimental_model_path: Path | None = field(default_factory=_default_task3_experimental_model_path)
+    task3_experimental_verifier_weights_path: Path | None = None
+    task3_experimental_max_references_per_frame: int = 2
+    task3_experimental_track_lost_patience: int = 3
+    task3_experimental_tiled_overlap: float = 0.20
+    task3_experimental_tile_size: int = 640
     profiling_gpu_query_cmd: tuple[str, ...] = (
         "nvidia-smi",
         "--query-gpu=memory.used,memory.total",
@@ -189,10 +219,14 @@ class MvpRuntimeSettings:
         return self.task1_export_dir / f"{candidate_name}.onnx"
 
     def resolve_task1_export_metadata_path(self, candidate_name: str) -> Path:
+        if candidate_name in self.task1_onnx_metadata_candidate_paths:
+            return Path(self.task1_onnx_metadata_candidate_paths[candidate_name])
         return self.task1_export_dir / f"{candidate_name}.metadata.json"
 
     def resolve_task1_export_engine_path(self, candidate_name: str) -> Path:
         return self.task1_export_dir / f"{candidate_name}.engine"
 
     def resolve_task1_trt_metadata_path(self, candidate_name: str) -> Path:
+        if candidate_name in self.task1_trt_metadata_candidate_paths:
+            return Path(self.task1_trt_metadata_candidate_paths[candidate_name])
         return self.task1_export_dir / f"{candidate_name}.engine.metadata.json"

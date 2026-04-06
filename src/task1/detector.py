@@ -550,6 +550,8 @@ class Task1Detector:
     backend_chain: list[tuple[DetectorStageSpec, Task1DetectorBackend]] = field(init=False, default_factory=list)
     primary_backend_name: str = field(init=False, default="synthetic")
     requested_stage: DetectorStageSpec = field(init=False)
+    preferred_stage_id: str | None = field(init=False, default=None)
+    active_stage_id: str = field(init=False, default="synthetic")
 
     def __post_init__(self) -> None:
         self.runtime_settings = self.runtime_settings or MvpRuntimeSettings()
@@ -561,6 +563,8 @@ class Task1Detector:
             for spec in self._resolve_stage_sequence()
         ]
         self.backend = self.backend_chain[0][1] if self.backend_chain else self.fallback_backend
+        self.preferred_stage_id = self.backend_chain[0][0].stage_id if self.backend_chain else "synthetic"
+        self.active_stage_id = self.preferred_stage_id or "synthetic"
 
     def detect(
         self,
@@ -569,9 +573,10 @@ class Task1Detector:
         decoded_frame: DecodedFrame | None = None,
     ) -> list[CanonicalDetection]:
         errors: list[str] = []
-        for spec, backend in self.backend_chain:
+        for spec, backend in self._iter_backend_chain():
             try:
                 detections = backend.detect(frame, image_bytes, decoded_frame=decoded_frame)
+                self._mark_active_stage(spec)
                 self._annotate_success(
                     detections,
                     active_backend=backend,
@@ -583,6 +588,7 @@ class Task1Detector:
                 errors.append(f"{spec.stage_id}:{exc}")
 
         detections = self.fallback_backend.detect(frame, image_bytes, decoded_frame=decoded_frame)
+        self.active_stage_id = "synthetic"
         for detection in detections:
             detection.metadata["backend_name"] = self.primary_backend_name
             detection.metadata["active_backend_name"] = self.fallback_backend.name
@@ -595,6 +601,44 @@ class Task1Detector:
             detection.metadata["backend_error"] = " | ".join(errors)
             detection.metadata["fallback_stage"] = "operational_synthetic"
         return detections
+
+    def warm_up_stage(
+        self,
+        frame: FrameEnvelope,
+        image_bytes: bytes,
+        decoded_frame: DecodedFrame | None = None,
+    ) -> dict[str, Any]:
+        errors: list[str] = []
+        attempted_stages: list[str] = []
+        failed_stages: list[str] = []
+        for spec, backend in self._iter_backend_chain():
+            attempted_stages.append(spec.stage_id)
+            try:
+                detections = backend.detect(frame, image_bytes, decoded_frame=decoded_frame)
+                self._mark_active_stage(spec)
+                return {
+                    "selected_stage": spec.stage_id,
+                    "runtime_name": spec.runtime_name,
+                    "candidate_name": spec.candidate_name,
+                    "detection_count": len(detections),
+                    "errors": errors,
+                    "attempted_stages": attempted_stages,
+                    "failed_stages": failed_stages,
+                }
+            except Exception as exc:
+                errors.append(f"{spec.stage_id}:{exc}")
+                failed_stages.append(spec.stage_id)
+        self._mark_active_stage(DetectorStageSpec(runtime_name="synthetic", candidate_name=None, stage_id="synthetic"))
+        self.fallback_backend.detect(frame, image_bytes, decoded_frame=decoded_frame)
+        return {
+            "selected_stage": "synthetic",
+            "runtime_name": "synthetic",
+            "candidate_name": None,
+            "detection_count": 0,
+            "errors": errors,
+            "attempted_stages": attempted_stages + ["synthetic"],
+            "failed_stages": failed_stages,
+        }
 
     def unload(self) -> None:
         seen_backend_ids: set[int] = set()
@@ -629,6 +673,11 @@ class Task1Detector:
 
     def _resolve_stage_sequence(self) -> list[DetectorStageSpec]:
         requested_stage_id = self.requested_stage.stage_id
+        enabled_stage_ids = {
+            item.strip().lower()
+            for item in self.runtime_settings.task1_enabled_stage_ids
+            if str(item).strip()
+        }
         configured_order = [
             _parse_detector_stage(item)
             for item in self.runtime_settings.task1_runtime_order
@@ -659,11 +708,34 @@ class Task1Detector:
         final_specs: list[DetectorStageSpec] = []
         seen_final: set[str] = set()
         for spec in ordered_specs:
+            if enabled_stage_ids and spec.stage_id != "synthetic" and spec.stage_id not in enabled_stage_ids:
+                continue
             if spec.stage_id in seen_final:
                 continue
             seen_final.add(spec.stage_id)
             final_specs.append(spec)
+        if not final_specs or final_specs[-1].stage_id != "synthetic":
+            final_specs.append(DetectorStageSpec(runtime_name="synthetic", candidate_name=None, stage_id="synthetic"))
         return final_specs
+
+    def _iter_backend_chain(self) -> list[tuple[DetectorStageSpec, Task1DetectorBackend]]:
+        if not self.backend_chain:
+            return []
+        preferred_stage_id = self.preferred_stage_id or self.requested_stage.stage_id
+        start_index = 0
+        for index, (spec, _) in enumerate(self.backend_chain):
+            if spec.stage_id == preferred_stage_id:
+                start_index = index
+                break
+        return list(self.backend_chain[start_index:])
+
+    def _mark_active_stage(self, spec: DetectorStageSpec) -> None:
+        self.preferred_stage_id = spec.stage_id
+        self.active_stage_id = spec.stage_id
+        for chain_spec, backend in self.backend_chain:
+            if chain_spec.stage_id == spec.stage_id:
+                self.backend = backend
+                break
 
     def _build_backend_for_stage(self, spec: DetectorStageSpec) -> Task1DetectorBackend:
         if spec.runtime_name == "synthetic" or spec.candidate_name is None:
@@ -706,6 +778,11 @@ class Task1Detector:
             detection.metadata["active_backend_name"] = getattr(active_backend, "name", self.primary_backend_name)
             detection.metadata["active_runtime_name"] = active_spec.runtime_name
             detection.metadata["active_stage_id"] = active_spec.stage_id
+            detection.metadata["production_enabled"] = (
+                not self.runtime_settings.task1_enabled_stage_ids
+                or active_spec.stage_id in self.runtime_settings.task1_enabled_stage_ids
+                or active_spec.stage_id == "synthetic"
+            )
             detection.metadata["validation_eligibility"] = _validation_eligibility_for_stage(active_spec.runtime_name)
             if active_spec.stage_id != self.requested_stage.stage_id:
                 detection.metadata["backend_unavailable"] = True

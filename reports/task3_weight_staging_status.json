@@ -1,0 +1,20 @@
+{
+  "python_executable": "C:\\Users\\Emre\\.venvs\\teknofest-gpu\\Scripts\\python.exe",
+  "configured_model_path": "C:\\Users\\Emre\\.teknofest_models\\task3\\yoloe-11s-seg.pt",
+  "searched_roots": [
+    "C:\\Users\\Emre\\.teknofest_models\\task3",
+    "C:\\Users\\Emre\\.teknofest_models",
+    "C:\\Users\\Emre\\Downloads",
+    "C:\\Users\\Emre\\Desktop",
+    "C:\\Users\\Emre\\Documents",
+    "C:\\Users\\Emre\\OneDrive"
+  ],
+  "yoloe_class_present": true,
+  "predict_signature": "(self, source=None, stream: 'bool' = False, visual_prompts: 'dict[str, list]' = {}, refer_image=None, predictor=<class 'ultralytics.models.yolo.yoloe.predict.YOLOEVPDetectPredictor'>, **kwargs)",
+  "visual_prompt_supported": true,
+  "candidate_weights": [],
+  "status": "WEIGHT_MISSING",
+  "reason": "no_local_yoloe_weight_found",
+  "chosen_weight": null,
+  "weight_load_attempts": []
+}

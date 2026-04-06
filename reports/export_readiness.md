@@ -6,4 +6,4 @@ Export Readiness: EVET
 - Tests ok: True
 
 Blokajlar:
-- Yok. ONNX hazirligina gecilebilir.
+- Yok. Production runtime tree validated ve export kapanisi alinabilir.

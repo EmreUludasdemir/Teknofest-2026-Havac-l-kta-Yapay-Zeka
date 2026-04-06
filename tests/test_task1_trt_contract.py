@@ -74,7 +74,6 @@ class Task1TrtContractTests(unittest.TestCase):
             [
                 "onnxruntime:yolo26n",
                 "ultralytics:yolo26n",
-                "onnxruntime:yolo11n",
                 "ultralytics:yolo11n",
                 "synthetic",
             ],

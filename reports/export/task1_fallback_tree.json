@@ -6,6 +6,7 @@
       "runtime": "tensorrt",
       "candidate": "yolo26n",
       "validation_passed": true,
+      "production_enabled": true,
       "required_artifact": "yolo26n.engine"
     },
     {
@@ -14,6 +15,7 @@
       "runtime": "onnxruntime",
       "candidate": "yolo26n",
       "validation_passed": true,
+      "production_enabled": true,
       "required_artifact": "yolo26n.onnx"
     },
     {
@@ -22,30 +24,25 @@
       "runtime": "ultralytics",
       "candidate": "yolo26n",
       "validation_passed": null,
+      "production_enabled": true,
       "required_artifact": "yolo26n.pt"
     },
     {
       "order": 4,
-      "stage": "onnxruntime:yolo11n",
-      "runtime": "onnxruntime",
-      "candidate": "yolo11n",
-      "validation_passed": false,
-      "required_artifact": "yolo11n.onnx"
-    },
-    {
-      "order": 5,
       "stage": "ultralytics:yolo11n",
       "runtime": "ultralytics",
       "candidate": "yolo11n",
       "validation_passed": null,
+      "production_enabled": true,
       "required_artifact": "yolo11n.pt"
     },
     {
-      "order": 6,
+      "order": 5,
       "stage": "synthetic",
       "runtime": "synthetic",
       "candidate": null,
       "validation_passed": null,
+      "production_enabled": true,
       "required_artifact": null
     }
   ]
