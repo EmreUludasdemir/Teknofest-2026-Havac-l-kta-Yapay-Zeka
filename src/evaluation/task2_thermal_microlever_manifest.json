@@ -1,0 +1,81 @@
+{
+  "scenarios": [
+    {
+      "scenario_id": "thermal_long_degraded_1",
+      "csv_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-1-Termal-translation.csv",
+      "video_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-1-Termal.MP4",
+      "frame_start": 0,
+      "frame_limit": 720,
+      "frame_stride": 2,
+      "health_segments": [{"health": "1", "length": 120}, {"health": "0", "length": 480}, {"health": "1", "length": 120}],
+      "transform_profile": "none",
+      "tags": ["thermal", "long_degraded", "transition"]
+    },
+    {
+      "scenario_id": "thermal_long_degraded_2",
+      "csv_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-2-Termal-translation.csv",
+      "video_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-2-Termal.MP4",
+      "frame_start": 0,
+      "frame_limit": 720,
+      "frame_stride": 2,
+      "health_segments": [{"health": "1", "length": 120}, {"health": "0", "length": 480}, {"health": "1", "length": 120}],
+      "transform_profile": "none",
+      "tags": ["thermal", "long_degraded", "transition"]
+    },
+    {
+      "scenario_id": "thermal_short_bursts_1",
+      "csv_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-1-Termal-translation.csv",
+      "video_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-1-Termal.MP4",
+      "frame_start": 0,
+      "frame_limit": 480,
+      "frame_stride": 2,
+      "health_segments": [{"health": "1", "length": 40}, {"health": "0", "length": 40}, {"health": "1", "length": 40}, {"health": "0", "length": 40}, {"health": "1", "length": 40}, {"health": "0", "length": 40}, {"health": "1", "length": 40}, {"health": "0", "length": 40}, {"health": "1", "length": 40}, {"health": "0", "length": 40}, {"health": "1", "length": 40}, {"health": "0", "length": 40}],
+      "transform_profile": "none",
+      "tags": ["thermal", "short_bursts"]
+    },
+    {
+      "scenario_id": "thermal_transition_noise_1",
+      "csv_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-1-Termal-translation.csv",
+      "video_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-1-Termal.MP4",
+      "frame_start": 0,
+      "frame_limit": 360,
+      "frame_stride": 2,
+      "health_segments": [{"health": "1", "length": 90}, {"health": "0", "length": 180}, {"health": "1", "length": 90}],
+      "transform_profile": "low_contrast_noise",
+      "tags": ["thermal", "transition_noise"]
+    },
+    {
+      "scenario_id": "thermal_frozen_frames_2",
+      "csv_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-2-Termal-translation.csv",
+      "video_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-2-Termal.MP4",
+      "frame_start": 0,
+      "frame_limit": 360,
+      "frame_stride": 2,
+      "health_segments": [{"health": "1", "length": 90}, {"health": "0", "length": 180}, {"health": "1", "length": 90}],
+      "transform_profile": "freeze_every_6",
+      "tags": ["thermal", "frozen_frames"]
+    },
+    {
+      "scenario_id": "rgb_long_degraded_control_1",
+      "csv_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-1-RGB-translation.csv",
+      "video_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-1-RGB.MP4",
+      "frame_start": 0,
+      "frame_limit": 720,
+      "frame_stride": 2,
+      "health_segments": [{"health": "1", "length": 120}, {"health": "0", "length": 480}, {"health": "1", "length": 120}],
+      "transform_profile": "weak_sensor_hint",
+      "tags": ["rgb", "control", "weak_sensor_hint"]
+    },
+    {
+      "scenario_id": "rgb_transition_control_2",
+      "csv_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-2-RGB-translation.csv",
+      "video_path": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-2-RGB.MP4",
+      "frame_start": 0,
+      "frame_limit": 360,
+      "frame_stride": 2,
+      "health_segments": [{"health": "1", "length": 90}, {"health": "0", "length": 180}, {"health": "1", "length": 90}],
+      "transform_profile": "none",
+      "tags": ["rgb", "transition_control"]
+    }
+  ]
+}

@@ -1,0 +1,518 @@
+{
+  "manifest_path": "C:\\TEKNOFEST\\src\\evaluation\\task2_thermal_microlever_manifest.json",
+  "variants": {
+    "baseline": {
+      "variant": "baseline",
+      "runtime_settings": {
+        "task2_confidence_floor_thermal": 0.4,
+        "task2_sensor_hint_max_weight_thermal": 0.15,
+        "task2_phase_primary_response_min_thermal": 0.45,
+        "task2_z_update_scale_thermal": 0.0
+      },
+      "scenarios": [
+        {
+          "scenario_id": "thermal_long_degraded_1",
+          "variant": "baseline",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "long_degraded",
+            "transition"
+          ],
+          "evaluated_frames": 720,
+          "health0_frame_count": 480,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 49.216562,
+          "transition_window_drift_metric": 44.103919,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 87.53078,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 29.7471
+        },
+        {
+          "scenario_id": "thermal_long_degraded_2",
+          "variant": "baseline",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "long_degraded",
+            "transition"
+          ],
+          "evaluated_frames": 720,
+          "health0_frame_count": 480,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 7.749096,
+          "transition_window_drift_metric": 17.032155,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 35.219026,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 30.3042
+        },
+        {
+          "scenario_id": "thermal_short_bursts_1",
+          "variant": "baseline",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "short_bursts"
+          ],
+          "evaluated_frames": 480,
+          "health0_frame_count": 240,
+          "transition_window_count": 240,
+          "recovery_count": 5,
+          "health0_drift_metric": 2.675098,
+          "transition_window_drift_metric": 2.675098,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 6.606396,
+          "catastrophic_jump_count": 2,
+          "runtime_p95_ms": 33.1847
+        },
+        {
+          "scenario_id": "thermal_transition_noise_1",
+          "variant": "baseline",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "transition_noise"
+          ],
+          "evaluated_frames": 360,
+          "health0_frame_count": 180,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 20.434357,
+          "transition_window_drift_metric": 20.067257,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 40.549893,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 31.0189
+        },
+        {
+          "scenario_id": "thermal_frozen_frames_2",
+          "variant": "baseline",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "frozen_frames"
+          ],
+          "evaluated_frames": 360,
+          "health0_frame_count": 180,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 0.049928,
+          "transition_window_drift_metric": 0.057072,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 0.087398,
+          "catastrophic_jump_count": 0,
+          "runtime_p95_ms": 28.8538
+        },
+        {
+          "scenario_id": "rgb_long_degraded_control_1",
+          "variant": "baseline",
+          "status": "ok",
+          "tags": [
+            "rgb",
+            "control",
+            "weak_sensor_hint"
+          ],
+          "evaluated_frames": 720,
+          "health0_frame_count": 480,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 6.217498,
+          "transition_window_drift_metric": 12.644793,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 26.478955,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 780.0974
+        },
+        {
+          "scenario_id": "rgb_transition_control_2",
+          "variant": "baseline",
+          "status": "ok",
+          "tags": [
+            "rgb",
+            "transition_control"
+          ],
+          "evaluated_frames": 360,
+          "health0_frame_count": 180,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 6.112721,
+          "transition_window_drift_metric": 10.012535,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 21.431223,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 751.1605
+        }
+      ],
+      "aggregate": {
+        "scenario_count": 7,
+        "ok_count": 7,
+        "aggregate_health0_drift": 16.106937,
+        "thermal_only_drift": 20.30302,
+        "rgb_control_drift": 6.188922,
+        "transition_drift": 9.99736,
+        "catastrophic_jumps": 7,
+        "recovery_continuity": 22.21175,
+        "recovery_error": 0.0,
+        "runtime_p95_ms": 245.3784,
+        "target_scenario_health0_drift": 49.216562
+      }
+    },
+    "thermal_confidence_floor_045": {
+      "variant": "thermal_confidence_floor_045",
+      "runtime_settings": {
+        "task2_confidence_floor_thermal": 0.45,
+        "task2_sensor_hint_max_weight_thermal": 0.15,
+        "task2_phase_primary_response_min_thermal": 0.45,
+        "task2_z_update_scale_thermal": 0.0
+      },
+      "scenarios": [
+        {
+          "scenario_id": "thermal_long_degraded_1",
+          "variant": "thermal_confidence_floor_045",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "long_degraded",
+            "transition"
+          ],
+          "evaluated_frames": 720,
+          "health0_frame_count": 480,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 49.216562,
+          "transition_window_drift_metric": 44.103919,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 87.53078,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 28.0494
+        },
+        {
+          "scenario_id": "thermal_long_degraded_2",
+          "variant": "thermal_confidence_floor_045",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "long_degraded",
+            "transition"
+          ],
+          "evaluated_frames": 720,
+          "health0_frame_count": 480,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 7.749096,
+          "transition_window_drift_metric": 17.032155,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 35.219026,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 25.9913
+        },
+        {
+          "scenario_id": "thermal_short_bursts_1",
+          "variant": "thermal_confidence_floor_045",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "short_bursts"
+          ],
+          "evaluated_frames": 480,
+          "health0_frame_count": 240,
+          "transition_window_count": 240,
+          "recovery_count": 5,
+          "health0_drift_metric": 2.675098,
+          "transition_window_drift_metric": 2.675098,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 6.606396,
+          "catastrophic_jump_count": 2,
+          "runtime_p95_ms": 27.6751
+        },
+        {
+          "scenario_id": "thermal_transition_noise_1",
+          "variant": "thermal_confidence_floor_045",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "transition_noise"
+          ],
+          "evaluated_frames": 360,
+          "health0_frame_count": 180,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 20.434357,
+          "transition_window_drift_metric": 20.067257,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 40.549893,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 29.2016
+        },
+        {
+          "scenario_id": "thermal_frozen_frames_2",
+          "variant": "thermal_confidence_floor_045",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "frozen_frames"
+          ],
+          "evaluated_frames": 360,
+          "health0_frame_count": 180,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 0.049928,
+          "transition_window_drift_metric": 0.057072,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 0.087398,
+          "catastrophic_jump_count": 0,
+          "runtime_p95_ms": 28.1508
+        },
+        {
+          "scenario_id": "rgb_long_degraded_control_1",
+          "variant": "thermal_confidence_floor_045",
+          "status": "ok",
+          "tags": [
+            "rgb",
+            "control",
+            "weak_sensor_hint"
+          ],
+          "evaluated_frames": 720,
+          "health0_frame_count": 480,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 6.217498,
+          "transition_window_drift_metric": 12.644793,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 26.478955,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 810.6608
+        },
+        {
+          "scenario_id": "rgb_transition_control_2",
+          "variant": "thermal_confidence_floor_045",
+          "status": "ok",
+          "tags": [
+            "rgb",
+            "transition_control"
+          ],
+          "evaluated_frames": 360,
+          "health0_frame_count": 180,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 6.112721,
+          "transition_window_drift_metric": 10.012535,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 21.431223,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 814.3327
+        }
+      ],
+      "aggregate": {
+        "scenario_count": 7,
+        "ok_count": 7,
+        "aggregate_health0_drift": 16.106937,
+        "thermal_only_drift": 20.30302,
+        "rgb_control_drift": 6.188922,
+        "transition_drift": 9.99736,
+        "catastrophic_jumps": 7,
+        "recovery_continuity": 22.21175,
+        "recovery_error": 0.0,
+        "runtime_p95_ms": 255.2892,
+        "target_scenario_health0_drift": 49.216562
+      }
+    },
+    "thermal_sensor_hint_weight_008": {
+      "variant": "thermal_sensor_hint_weight_008",
+      "runtime_settings": {
+        "task2_confidence_floor_thermal": 0.4,
+        "task2_sensor_hint_max_weight_thermal": 0.08,
+        "task2_phase_primary_response_min_thermal": 0.45,
+        "task2_z_update_scale_thermal": 0.0
+      },
+      "scenarios": [
+        {
+          "scenario_id": "thermal_long_degraded_1",
+          "variant": "thermal_sensor_hint_weight_008",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "long_degraded",
+            "transition"
+          ],
+          "evaluated_frames": 720,
+          "health0_frame_count": 480,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 49.445676,
+          "transition_window_drift_metric": 44.371811,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 87.757658,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 27.2806
+        },
+        {
+          "scenario_id": "thermal_long_degraded_2",
+          "variant": "thermal_sensor_hint_weight_008",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "long_degraded",
+            "transition"
+          ],
+          "evaluated_frames": 720,
+          "health0_frame_count": 480,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 8.667214,
+          "transition_window_drift_metric": 17.991539,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 37.124348,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 28.7905
+        },
+        {
+          "scenario_id": "thermal_short_bursts_1",
+          "variant": "thermal_sensor_hint_weight_008",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "short_bursts"
+          ],
+          "evaluated_frames": 480,
+          "health0_frame_count": 240,
+          "transition_window_count": 240,
+          "recovery_count": 5,
+          "health0_drift_metric": 3.222319,
+          "transition_window_drift_metric": 3.222319,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 7.124,
+          "catastrophic_jump_count": 2,
+          "runtime_p95_ms": 27.0225
+        },
+        {
+          "scenario_id": "thermal_transition_noise_1",
+          "variant": "thermal_sensor_hint_weight_008",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "transition_noise"
+          ],
+          "evaluated_frames": 360,
+          "health0_frame_count": 180,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 20.573197,
+          "transition_window_drift_metric": 20.208556,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 40.549893,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 29.0871
+        },
+        {
+          "scenario_id": "thermal_frozen_frames_2",
+          "variant": "thermal_sensor_hint_weight_008",
+          "status": "ok",
+          "tags": [
+            "thermal",
+            "frozen_frames"
+          ],
+          "evaluated_frames": 360,
+          "health0_frame_count": 180,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 0.084056,
+          "transition_window_drift_metric": 0.081844,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 0.137326,
+          "catastrophic_jump_count": 0,
+          "runtime_p95_ms": 27.8929
+        },
+        {
+          "scenario_id": "rgb_long_degraded_control_1",
+          "variant": "thermal_sensor_hint_weight_008",
+          "status": "ok",
+          "tags": [
+            "rgb",
+            "control",
+            "weak_sensor_hint"
+          ],
+          "evaluated_frames": 720,
+          "health0_frame_count": 480,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 6.217498,
+          "transition_window_drift_metric": 12.644793,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 26.478955,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 779.8929
+        },
+        {
+          "scenario_id": "rgb_transition_control_2",
+          "variant": "thermal_sensor_hint_weight_008",
+          "status": "ok",
+          "tags": [
+            "rgb",
+            "transition_control"
+          ],
+          "evaluated_frames": 360,
+          "health0_frame_count": 180,
+          "transition_window_count": 40,
+          "recovery_count": 1,
+          "health0_drift_metric": 6.112721,
+          "transition_window_drift_metric": 10.012535,
+          "recovery_error": 0.0,
+          "recovery_continuity_error": 21.431223,
+          "catastrophic_jump_count": 1,
+          "runtime_p95_ms": 760.6926
+        }
+      ],
+      "aggregate": {
+        "scenario_count": 7,
+        "ok_count": 7,
+        "aggregate_health0_drift": 16.42817,
+        "thermal_only_drift": 20.76016,
+        "rgb_control_drift": 6.188922,
+        "transition_drift": 10.387083,
+        "catastrophic_jumps": 7,
+        "recovery_continuity": 22.6454,
+        "recovery_error": 0.0,
+        "runtime_p95_ms": 244.4159,
+        "target_scenario_health0_drift": 49.445676
+      }
+    }
+  },
+  "comparisons": {
+    "thermal_confidence_floor_045": {
+      "improved_scenarios": [],
+      "target_scenario_improvement_ratio": 0.0,
+      "aggregate_health0_delta_ratio": 0.0,
+      "thermal_only_delta_ratio": 0.0,
+      "rgb_control_delta_ratio": 0.0,
+      "transition_delta_ratio": 0.0,
+      "recovery_error_delta": 0.0,
+      "recovery_continuity_delta_ratio": 0.0,
+      "runtime_p95_ratio": 1.04039,
+      "catastrophic_jump_delta": 0,
+      "interesting": false,
+      "merge_ready": false,
+      "partial_ready": false
+    },
+    "thermal_sensor_hint_weight_008": {
+      "improved_scenarios": [],
+      "target_scenario_improvement_ratio": -0.004655,
+      "aggregate_health0_delta_ratio": 0.019944,
+      "thermal_only_delta_ratio": 0.022516,
+      "rgb_control_delta_ratio": 0.0,
+      "transition_delta_ratio": 0.038983,
+      "recovery_error_delta": 0.0,
+      "recovery_continuity_delta_ratio": 0.019523,
+      "runtime_p95_ratio": 0.996077,
+      "catastrophic_jump_delta": 0,
+      "interesting": false,
+      "merge_ready": false,
+      "partial_ready": false
+    }
+  },
+  "final_recommendation": "NO MERGE CANDIDATE"
+}
