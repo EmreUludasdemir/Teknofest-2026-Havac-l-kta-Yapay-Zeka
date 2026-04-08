@@ -56,7 +56,7 @@ class Task3MvpTests(unittest.TestCase):
             filtered = filter_no_match_candidates(ambiguous_matches, min_score=0.70, ambiguity_margin=0.05)
             self.assertEqual(filtered, [])
 
-    def test_official_wire_omits_undefined_objects(self) -> None:
+    def test_official_wire_includes_undefined_objects(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             temp_path = Path(tmp_dir)
             (temp_path / "ref-001.jpg").write_bytes(b"ref-1")
@@ -72,7 +72,10 @@ class Task3MvpTests(unittest.TestCase):
 
             result = FrameResult(frame_url=self._frame(1).frame_url, detected_undefined_objects=filtered)
             payload = adapter.build_wire_prediction(result)
-            self.assertNotIn("detected_undefined_objects", payload)
+            self.assertIn("detected_undefined_objects", payload)
+            self.assertEqual(len(payload["detected_undefined_objects"]), len(filtered))
+            if filtered:
+                self.assertEqual(payload["detected_undefined_objects"][0]["object_id"], filtered[0].object_id)
 
 
 if __name__ == "__main__":

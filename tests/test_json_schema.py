@@ -10,7 +10,8 @@ from src.server.official_repo_batch_adapter import OfficialRepoBatchAdapter
 
 
 class JsonSchemaTests(unittest.TestCase):
-    def test_canonical_model_keeps_task3_but_official_wire_omits_it(self) -> None:
+    def test_wire_includes_task3_and_motion_status_per_2026_spec(self) -> None:
+        """2026 spec requires motion_status and detected_undefined_objects in wire."""
         frame = FrameEnvelope(
             frame_url="http://mock/frames/1/",
             image_url="/mock/frame_000000.jpg",
@@ -21,17 +22,32 @@ class JsonSchemaTests(unittest.TestCase):
             health_status="1",
         )
         result = build_protocol_placeholder_result(frame)
+
+        # Vehicle with motion_status
         result.detected_objects.append(
             CanonicalDetection(
-                class_id=2,
-                landing_status=1,
-                motion_status=-1,
+                class_id=0,  # Vehicle
+                landing_status=-1,
+                motion_status=1,  # Moving
                 top_left_x=10.0,
                 top_left_y=10.0,
                 bottom_right_x=20.0,
                 bottom_right_y=20.0,
             )
         )
+        # UAP area with landing_status
+        result.detected_objects.append(
+            CanonicalDetection(
+                class_id=2,  # UAP
+                landing_status=1,
+                motion_status=None,
+                top_left_x=30.0,
+                top_left_y=30.0,
+                bottom_right_x=50.0,
+                bottom_right_y=50.0,
+            )
+        )
+        # Task 3 undefined object
         result.detected_undefined_objects.append(
             CanonicalUndefinedObject(
                 object_id="ref-001",
@@ -54,8 +70,21 @@ class JsonSchemaTests(unittest.TestCase):
             )
         )
         wire_payload = adapter.build_wire_prediction(result)
-        self.assertNotIn("detected_undefined_objects", wire_payload)
-        self.assertNotIn("motion_status", wire_payload["detected_objects"][0])
+
+        # 2026 spec: detected_undefined_objects MUST be in wire
+        self.assertIn("detected_undefined_objects", wire_payload)
+        self.assertEqual(len(wire_payload["detected_undefined_objects"]), 1)
+        self.assertEqual(wire_payload["detected_undefined_objects"][0]["object_id"], "ref-001")
+
+        # 2026 spec: motion_status MUST be in wire for vehicles (class_id=0)
+        vehicle_obj = wire_payload["detected_objects"][0]
+        self.assertIn("motion_status", vehicle_obj)
+        self.assertEqual(vehicle_obj["motion_status"], "1")
+
+        # UAP should NOT have motion_status (it's None)
+        uap_obj = wire_payload["detected_objects"][1]
+        self.assertNotIn("motion_status", uap_obj)
+
         validator.validate_official_repo_prediction(wire_payload)
 
 
