@@ -8,6 +8,7 @@ from typing import Any
 from src.core.frame_state import CanonicalDetection, DecodedFrame
 from src.core.utils import clamp, normalize_box
 from src.core.vision import is_cv2_available
+from src.task1.class_mapping import canonical_task1_class_from_model_name
 from src.task1.postprocess import deduplicate_detections
 
 if is_cv2_available():  # pragma: no branch - ortama bagli
@@ -330,11 +331,4 @@ def _rescale_box(box: tuple[float, float, float, float], preprocess_context: Onn
 
 
 def _canonical_class_from_model_name(class_name: str) -> int | None:
-    normalized = class_name.strip().lower()
-    if normalized == "person":
-        return 1
-    if normalized in {"bicycle", "car", "motorcycle", "motorbike", "bus", "truck", "train", "boat"}:
-        return 0
-    if normalized in {"airplane", "aeroplane"}:
-        return 2
-    return None
+    return canonical_task1_class_from_model_name(class_name)

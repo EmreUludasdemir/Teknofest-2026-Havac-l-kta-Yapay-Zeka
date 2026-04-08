@@ -12,6 +12,7 @@ from src.config.settings import MvpRuntimeSettings
 from src.core.frame_state import CanonicalDetection, DecodedFrame, FrameEnvelope
 from src.core.utils import extract_frame_index
 from src.core.vision import decode_image_bytes
+from src.task1.class_mapping import canonical_task1_class_from_model_name
 
 
 def _resolve_runtime_device() -> str | int | None:
@@ -23,14 +24,8 @@ def _resolve_runtime_device() -> str | int | None:
 
 
 def _canonical_class_from_model_name(class_name: str) -> int | None:
-    normalized = class_name.strip().lower()
-    if normalized == "person":
-        return 1
-    if normalized in {"bicycle", "car", "motorcycle", "motorbike", "bus", "truck", "train", "boat"}:
-        return 0
-    if normalized in {"airplane", "aeroplane"}:
-        return 2
-    return None
+    """Map model labels to explicit TEKNOFEST 2026 Task 1 class IDs."""
+    return canonical_task1_class_from_model_name(class_name)
 
 
 def _resolve_model_label(names: Any, class_id: int) -> str:
