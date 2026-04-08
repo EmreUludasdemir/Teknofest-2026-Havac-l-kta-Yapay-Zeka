@@ -3,6 +3,8 @@
 **Tarih:** 2026-04-08  
 **Kapsam:** `reports/competition_deep_analysis_2026.md` icindeki yuksek etkili iddialarin, mevcut lokal worktree gercegine gore siniflandirilmasi.
 
+> Status note (2026-04-08): Bu audit, publish oncesi worktree snapshot'idir. `feature/spec-compliance-wire-2026` branch'indeki `de67f23` commit'i, burada `fixed_in_worktree` olarak isaretlenen wire ve Task 1 mapping duzeltmelerini bu branch icin commitli gercege cevirmistir.
+
 ## Durum Etiketleri
 
 - `still_true`: rapordaki iddia mevcut repo gercegiyle uyumlu.

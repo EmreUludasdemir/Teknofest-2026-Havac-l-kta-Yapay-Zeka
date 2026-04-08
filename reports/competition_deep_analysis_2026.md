@@ -3,7 +3,7 @@
 **Tarih:** 2026-04-07  
 **Kaynak:** Deep research analysis from official sources + repository inspection
 
-> Status note (2026-04-08): Some wire-format and Task 1 mapping gap claims below are stale relative to the current spec-compliance patch. See `reports/competition_deep_analysis_2026_gap_audit.md` for stale-claim history and current repo status.
+> Status note (2026-04-08): Some wire-format and Task 1 mapping gap claims below are stale relative to the current spec-compliance patch. See `reports/competition_deep_analysis_2026_gap_audit.md` for stale-claim history; the current branch patch supersedes the Task 3 wire, `motion_status`, `object_id`, and Task 1 class-mapping gaps called out below.
 
 ---
 
