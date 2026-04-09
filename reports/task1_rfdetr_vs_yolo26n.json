@@ -1,0 +1,74 @@
+{
+  "date": "2026-04-09",
+  "branch": "feature/task1-rfdetr-sahi",
+  "decision": "EXPERIMENTAL ONLY",
+  "baseline": {
+    "candidate": "yolo26n",
+    "runtime_profile_sources": [
+      "reports/profiling/task1_real_profile_gpu.json",
+      "reports/profiling/task1_real_profile_cpu.json",
+      "reports/profiling/task1_real_profile_comparison.md"
+    ],
+    "gpu": {
+      "available": true,
+      "cold_load_latency_ms": 105.455,
+      "warm_p50_latency_ms": 27.115,
+      "warm_p95_latency_ms": 220.64959999999994,
+      "peak_vram_mb": 212.0
+    },
+    "cpu": {
+      "available": true,
+      "cold_load_latency_ms": 90.965,
+      "warm_p50_latency_ms": 105.785,
+      "warm_p95_latency_ms": 176.3422,
+      "peak_vram_mb": 0.0
+    },
+    "sampled_replay_source": "reports/export/task1_yolo26n_native_vs_onnx.json",
+    "sampled_replay": {
+      "validation_video": "data\\THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001\\THYZ_2026_Ornek_Veri_Seti\\THYZ_2026_Ornek_Veri_1.MP4",
+      "sample_count": 10,
+      "native_latency_p50_ms": 60.8125,
+      "onnx_latency_p50_ms": 52.732,
+      "native_peak_vram_mb": 2589.0,
+      "onnx_peak_vram_mb": 2661.0,
+      "accepted": true
+    }
+  },
+  "experimental": {
+    "candidate": "rfdetr-base+sahi",
+    "status": "not_run",
+    "local_weight_connected": false,
+    "sahi_stack_verified": false,
+    "dataset_connections": {
+      "visdrone2019_det": false,
+      "uavdt": false,
+      "teknofest_sample_frames": true,
+      "local_uap_uai_specific_data": false
+    },
+    "runtime_risk": "current_teknofest_gpu_python_entrypoint_broken"
+  },
+  "comparison_path": {
+    "runtime_harness": "src/tools/profiling_harness.py::evaluate_candidates",
+    "sampled_replay_harness": "src/evaluation/task1_onnx_validation.py::run_task1_pipeline_on_samples",
+    "post_detector_logic": [
+      "src/task1/tracker.py::Task1Tracker",
+      "src/task1/motion_logic.py::assign_motion_status",
+      "src/task1/landing_logic.py::assign_landing_status"
+    ]
+  },
+  "branch_metrics_to_decide": [
+    "overall_mAP",
+    "small_object_AP",
+    "per_class_AP",
+    "motion_status_sensitive_performance",
+    "landing_status_sensitive_performance",
+    "runtime",
+    "vram_if_measurable"
+  ],
+  "blockers": [
+    "no_local_rfdetr_weight_found_under_C:\\Users\\Emre\\.teknofest_models",
+    "no_local_visdrone2019_det_found_in_checked_roots",
+    "no_local_uavdt_found_in_checked_roots",
+    "current_teknofest_gpu_venv_python_entrypoint_is_broken_from_shell"
+  ]
+}

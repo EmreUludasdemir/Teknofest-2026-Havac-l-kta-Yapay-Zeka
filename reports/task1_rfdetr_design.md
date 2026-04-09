@@ -1,384 +1,131 @@
-# Task 1 RF-DETR + SAHI Score-Up Design
+# Task 1 RF-DETR Base + SAHI Design
 
-**Date:** 2026-04-07  
+**Date:** 2026-04-09  
 **Branch:** `feature/task1-rfdetr-sahi`  
-**Priority:** #2  
-**Status:** READY - RF-DETR available via transformers/timm
+**Status:** branch kickoff complete, evaluation path isolated, no production swap
 
-## Executive Summary
+## Goal
 
-Task 1 production uses YOLO26n which is already validated and strong. This branch explores RF-DETR (Roofline DETR) with SAHI-aware training for potentially higher accuracy ceiling, particularly on small objects and edge cases.
+Evaluate whether `RF-DETR-Base` with SAHI-aware training can beat the current `yolo26n` Task 1 production path on aerial small-object detection without changing production defaults.
 
-**Important:** This is a score-up branch, NOT a production replacement. Production Task 1 remains YOLO26n.
+## Guardrails
 
-## Current Production Baseline
+- Production Task 1 defaults remain unchanged.
+- Task 2 and Task 3 behavior remain untouched.
+- Sequential runtime defaults remain untouched.
+- This branch is an evaluation branch, not a production detector swap.
+- SAHI must be train/infer consistent. Inference-only slicing is not acceptable if training is not tile-aware.
 
-| Model | mAP@50 | Latency | VRAM | Status |
-|-------|--------|---------|------|--------|
-| YOLO26n (TensorRT) | ~85%* | ~15ms | ~1GB | ✅ Production |
-| YOLO26n (ONNX) | ~85%* | ~25ms | ~1GB | ✅ Fallback |
-| YOLO11n | ~82%* | ~20ms | ~1GB | ✅ Fallback |
+## Current Task 1 Baseline To Reuse
 
-*Estimated on internal evaluation set
+### Runtime and detector baseline
 
-## Why RF-DETR?
+- Production primary candidate remains `yolo26n`.
+- Current profiling baseline comes from:
+  - `src/tools/profiling_harness.py::evaluate_candidates`
+  - `reports/profiling/task1_real_profile_gpu.json`
+  - `reports/profiling/task1_real_profile_cpu.json`
+- Current replay-style sampled pipeline comes from:
+  - `src/evaluation/task1_onnx_validation.py::run_task1_pipeline_on_samples`
+  - `src/evaluation/task1_onnx_validation.py::sample_task1_validation_frames`
+  - `reports/export/task1_yolo26n_native_vs_onnx.json`
 
-RF-DETR (Roofline DETR) offers:
+### Current Task 1 logic to preserve around detector experimentation
 
-1. **End-to-end detection** - No NMS required, cleaner architecture
-2. **Better small object handling** - Attention-based feature aggregation
-3. **Stronger on dense scenes** - No NMS artifacts
-4. **Competitive latency** - Optimized for real-time use
+- Tracking: `src/task1/tracker.py::Task1Tracker`
+- Movement classification: `src/task1/motion_logic.py::assign_motion_status`
+- Landing suitability: `src/task1/landing_logic.py::assign_landing_status`
+- Deduplication: `src/task1/postprocess.py::deduplicate_detections`
 
-### RF-DETR Model Variants
+This means the detector experiment can stay isolated while still being evaluated under the same Task 1 output contract:
 
-| Model | Params | GFLOPs | mAP (COCO) | Latency |
-|-------|--------|--------|------------|---------|
-| RF-DETR-Base | 29M | 120 | 53.2 | ~30ms |
-| RF-DETR-Large | 128M | 340 | 56.3 | ~60ms |
+- 4 canonical classes: vehicle, human, UAP, UAI
+- motion classification through tracker displacement
+- landing suitability through occupancy / overlap logic
 
-## Proposed Architecture
+## Experimental Path For This Branch
 
-### Training Pipeline (SAHI-Aware)
+### Detector choice
 
-```
-Raw Training Data
-       │
-       ▼
-┌─────────────────────────────────┐
-│    SAHI Sliced Training         │
-│  - 640x640 tiles                │
-│  - 0.2 overlap ratio            │
-│  - Ground truth mapping         │
-└─────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────┐
-│    Weather Augmentation         │
-│  - Rain simulation              │
-│  - Fog simulation               │
-│  - Snow simulation              │
-│  - Night/low-light              │
-└─────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────┐
-│    Mosaic + Copy-Paste          │
-│  - Multi-image composition      │
-│  - Rare class oversampling      │
-└─────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────┐
-│      RF-DETR Training           │
-│  - Hybrid encoder               │
-│  - Deformable attention         │
-│  - Set prediction loss          │
-└─────────────────────────────────┘
-       │
-       ▼
-   Trained Weights
-```
+- First model: `RF-DETR-Base`
+- Large model is explicitly out of scope for the first pass
+- SAHI support is planned only as part of a tile-aware train + infer path
 
-### Inference Pipeline
+### Branch-local experiment shape
 
-```
-Frame Input
-       │
-       ▼
-┌─────────────────────────────────┐
-│      Optional: SAHI Tiling      │
-│  - Adaptive based on resolution │
-│  - Small object boost mode      │
-└─────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────┐
-│       RF-DETR Detector          │
-│  - End-to-end (no NMS)          │
-│  - Query-based detection        │
-└─────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────┐
-│     BoT-SORT / ByteTrack        │
-│  - Object tracking              │
-│  - Movement classification      │
-└─────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────┐
-│    Landing Suitability          │
-│  - Geometric analysis           │
-│  - Segmentation-assisted        │
-│  - Stability scoring            │
-└─────────────────────────────────┘
-       │
-       ▼
-   Final Detections
-```
+- Detector experiment stays outside production runtime selection
+- Comparison target stays `yolo26n`
+- Result reports will decide only:
+  - `MERGE CANDIDATE`
+  - `PARTIAL MERGE CANDIDATE`
+  - `EXPERIMENTAL ONLY`
 
-## Preferred Technology Stack
+### Planned branch-local experiment components
 
-| Component | Primary | Alternative | Notes |
-|-----------|---------|-------------|-------|
-| Detector | RF-DETR-Base | RT-DETR-L | RF-DETR is newer |
-| Tiling | SAHI | None | Training + inference |
-| Tracker | BoT-SORT | ByteTrack | BoT-SORT has Re-ID |
-| Landing | Geometric | SAM-based | SAM adds latency |
-| Training | MMDetection | Detectron2 | Better DETR support |
+- RF-DETR-Base detector training path
+- SAHI-aware slicing policy for both training and inference
+- Current Task 1 tracker + motion + landing logic reused as-is around detector outputs
+- Fair comparison against the same yolo26n replay/eval slices
 
-## Data Strategy
+## Data Sources
 
-### Dataset Aggregation
+### Connected now
 
-| Dataset | Size | Classes | Purpose |
-|---------|------|---------|---------|
-| VisDrone | 10K+ | 12 | Aerial drone view |
-| UAVDT | 80K+ | 3 | Vehicle detection |
-| DOTA | 2K+ | 15 | Oriented objects |
-| xView | 1M+ | 60 | Satellite imagery |
-| COWC | 32K+ | 1 | Vehicle counting |
-| TEKNOFEST samples | ~5K | 3 | Competition domain |
+- TEKNOFEST sample videos in repo:
+  - `data/THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001/THYZ_2026_Ornek_Veri_Seti/THYZ_2026_Ornek_Veri_1.MP4`
+  - `data/THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001/THYZ_2026_Ornek_Veri_Seti/THYZ_2026_Ornek_Veri_2_Termal.MP4`
 
-### Augmentation Strategy
+### Not locally connected at kickoff
 
-```python
-augmentation_config = {
-    # Spatial
-    "mosaic_prob": 0.5,
-    "mixup_prob": 0.3,
-    "random_crop": {"prob": 0.5, "scale": (0.5, 1.0)},
-    "rotation": {"prob": 0.3, "degrees": 15},
-    
-    # Weather simulation
-    "rain": {"prob": 0.2, "intensity": (0.1, 0.5)},
-    "fog": {"prob": 0.2, "density": (0.1, 0.4)},
-    "snow": {"prob": 0.1, "intensity": (0.1, 0.3)},
-    "night": {"prob": 0.15, "gamma": (0.3, 0.7)},
-    
-    # Copy-Paste for rare classes
-    "copy_paste": {
-        "prob": 0.3,
-        "target_classes": ["airplane", "person"],  # Rare in aerial
-    },
-}
-```
+- `VisDrone2019-DET`
+- `UAVDT`
+- Any explicit local UAP/UAI detection dataset beyond current sample assets
 
-### UAP/UAI Synthetic Data
+## Required Augmentation Policy
 
-UAP (Unmanned Aerial Platform) and UAI (Unmanned Aerial Infrastructure) synthetic data:
+The branch will use this priority order once training data is connected:
 
-```python
-synthetic_generation_config = {
-    "uap_models": [
-        "DJI_Phantom_4",
-        "DJI_Mavic_3",
-        "Generic_Quadcopter",
-    ],
-    "environments": [
-        "urban_daylight",
-        "rural_overcast",
-        "coastal_sunny",
-        "mountain_cloudy",
-    ],
-    "altitudes_m": [10, 30, 50, 100, 200],
-    "viewpoints": ["nadir", "oblique_30", "oblique_45"],
-    "count_per_combo": 100,
-}
-```
+1. Mosaic
+2. RandomCrop + Resize
+3. CopyPaste for rare UAP/UAI classes
+4. Weather augmentation: rain / fog / snow
+5. Night degradation / brightness reduction
 
-## Implementation Plan
+## Comparison Harness To Reuse
 
-### Phase 1: RF-DETR Baseline
+### Baseline harness already present
 
-```python
-# tools/train_rfdetr_baseline.py
-from mmdet.apis import train_detector
-from mmdet.models import build_detector
+- Runtime / VRAM / availability:
+  - `src/tools/profiling_harness.py`
+- Sampled replay pipeline with current Task 1 logic:
+  - `src/evaluation/task1_onnx_validation.py`
 
-config = {
-    "model": {
-        "type": "RFDETR",
-        "backbone": "ResNet50",
-        "neck": "ChannelMapper",
-        "bbox_head": {
-            "type": "RFDETRHead",
-            "num_classes": 3,  # vehicle, person, airplane
-            "num_queries": 300,
-        },
-    },
-    "train_cfg": {
-        "epochs": 100,
-        "batch_size": 8,
-        "lr": 0.0001,
-    },
-}
-```
+### What the RF-DETR branch must add later
 
-### Phase 2: SAHI Integration
+- Label-aware Task 1 evaluator for:
+  - overall mAP
+  - small-object AP
+  - per-class AP
+  - motion-status-sensitive performance
+  - landing-status-sensitive performance
 
-```python
-# src/task1/experimental/sahi_detector.py
-from sahi import AutoDetectionModel
-from sahi.predict import get_sliced_prediction
+The current repo has runtime and sampled replay coverage, but not a completed RF-DETR-vs-yolo26n label-aware AP harness.
 
-class SAHIRFDETRDetector:
-    def __init__(self, model_path: str, slice_size: int = 640):
-        self.model = AutoDetectionModel.from_pretrained(
-            model_type="rfdetr",
-            model_path=model_path,
-            confidence_threshold=0.25,
-        )
-        self.slice_size = slice_size
-    
-    def detect(self, image: np.ndarray) -> list[Detection]:
-        result = get_sliced_prediction(
-            image,
-            self.model,
-            slice_height=self.slice_size,
-            slice_width=self.slice_size,
-            overlap_height_ratio=0.2,
-            overlap_width_ratio=0.2,
-        )
-        return self._convert_to_canonical(result)
-```
+## Kickoff Findings
 
-### Phase 3: Tracker Integration
+- Baseline harness exists and is reusable.
+- `yolo26n` baseline artefacts already exist for CPU/GPU runtime and ONNX parity.
+- No local RF-DETR weight was found under `C:\Users\Emre\.teknofest_models`.
+- `VisDrone2019-DET` and `UAVDT` were not found in the checked local roots.
+- The current `teknofest-gpu` venv Python entry point is broken from this shell because it points at a missing base interpreter.
 
-```python
-# src/task1/experimental/botsort_tracker.py
-from boxmot import BoTSORT
+## Immediate Branch Scope
 
-class Task1TrackerExperimental:
-    def __init__(self):
-        self.tracker = BoTSORT(
-            reid_weights="osnet_x0_25_market1501.pt",
-            device="cuda:0",
-            half=True,
-            track_high_thresh=0.5,
-            track_low_thresh=0.1,
-            new_track_thresh=0.6,
-            track_buffer=30,
-            cmc_method="sparseOptFlow",
-        )
-    
-    def update(self, detections: list, frame: np.ndarray) -> list:
-        # Convert to tracker format
-        dets = self._to_tracker_format(detections)
-        # Update tracker
-        tracks = self.tracker.update(dets, frame)
-        # Classify movement
-        return self._classify_movement(tracks)
-```
+This kickoff branch produces:
 
-### Phase 4: Landing Suitability
+- a corrected Task 1 RF-DETR design grounded in current repo truth
+- a baseline-vs-experimental status report
+- a machine-readable comparison status JSON
+- a risks document
 
-```python
-# src/task1/experimental/landing_logic.py
-class LandingSuitabilityAnalyzer:
-    def analyze(self, detection: Detection, frame: np.ndarray) -> str:
-        """
-        Determine landing suitability based on:
-        1. Object stability (motion blur, tracking confidence)
-        2. Geometric properties (aspect ratio, area)
-        3. Context (nearby objects, terrain)
-        4. Optional: Segmentation mask quality
-        """
-        
-        stability_score = self._compute_stability(detection)
-        geometry_score = self._compute_geometry(detection)
-        context_score = self._compute_context(detection, frame)
-        
-        total_score = (
-            stability_score * 0.4 +
-            geometry_score * 0.3 +
-            context_score * 0.3
-        )
-        
-        if total_score > 0.7:
-            return "1"  # Suitable
-        return "0"  # Not suitable
-```
-
-## Evaluation Framework
-
-### Comparison Metrics
-
-| Metric | Description | Weight |
-|--------|-------------|--------|
-| mAP@50 | Primary accuracy | 40% |
-| mAP@50:95 | Strict accuracy | 20% |
-| Small object AP | <32x32 pixels | 15% |
-| Latency p95 | 95th percentile | 15% |
-| VRAM usage | Peak GPU memory | 10% |
-
-### Test Scenarios
-
-| Scenario | Purpose |
-|----------|---------|
-| Standard daylight | Baseline performance |
-| Dense traffic | Multi-object handling |
-| Small objects | SAHI benefit |
-| Weather degraded | Robustness |
-| Thermal imagery | Cross-modality |
-| Fast motion | Tracking quality |
-
-## Success Criteria
-
-### For Merge Consideration
-
-| Metric | YOLO26n Baseline | RF-DETR Target | Required |
-|--------|------------------|----------------|----------|
-| mAP@50 | ~85% | >88% | +3% min |
-| Small AP | ~60% | >70% | +10% min |
-| Latency | ~15ms | <50ms | <3.3x slower |
-| VRAM | ~1GB | <3GB | <3x more |
-
-### Acceptable Trade-offs
-
-- Latency up to 50ms (3x baseline) if mAP improves >5%
-- VRAM up to 3GB if small object detection improves >15%
-- Training time increase acceptable (offline)
-
-## Dependencies
-
-### Training Dependencies
-
-```txt
-# requirements-task1-experimental.txt
-mmdet>=3.0.0
-mmengine>=0.10.0
-sahi>=0.11.0
-albumentations>=1.3.0
-boxmot>=10.0.0
-```
-
-### Inference Dependencies
-
-```txt
-torch>=2.0.0
-onnxruntime-gpu>=1.17.0
-```
-
-## Risk Assessment
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| RF-DETR underperforms | Low | High | Fall back to RT-DETR |
-| Latency budget exceeded | Medium | Medium | Use smaller model |
-| Training data insufficient | Medium | Medium | Augmentation + synthetic |
-| Integration complexity | Low | Low | Isolated branch |
-
-## Decision Framework
-
-| Decision | Criteria |
-|----------|----------|
-| **MERGE CANDIDATE** | >3% mAP improvement, <50ms latency |
-| **PARTIAL MERGE** | Useful components (tracker, landing) only |
-| **EXPERIMENTAL ONLY** | Interesting but not competition-ready |
-| **NOT RECOMMENDED** | No improvement or regression |
-
----
-
-*This branch explores higher-ceiling detection without risking production stability.*
+It does not claim that RF-DETR has beaten `yolo26n` yet.
