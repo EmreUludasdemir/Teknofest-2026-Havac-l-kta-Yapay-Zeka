@@ -49,3 +49,15 @@
 - training metrics: `None`
 - holdout metrics: `None`
 - learning dynamics: `None`
+
+## `combined_yolo11s_human_focus_finetune`
+
+- status: `blocked`
+- reason: `missing_yaml`
+- model: `C:\TEKNOFEST\_logs\task1_training\combined_yolo11s_human_focus_finetune\weights\last.pt`
+- yaml: `C:\TEKNOFEST\data\task1_yolo\combined_human_focus\task1_combined_human_focus.yaml`
+- best weights: `None`
+- batch used: `None`
+- training metrics: `None`
+- holdout metrics: `None`
+- learning dynamics: `None`

@@ -61,6 +61,20 @@
       "holdout_metrics": null,
       "learning_dynamics": null,
       "peak_vram_mb": null
+    },
+    "combined_yolo11s_human_focus_finetune": {
+      "status": "blocked",
+      "reason": "missing_yaml",
+      "yaml_path": "C:\\TEKNOFEST\\data\\task1_yolo\\combined_human_focus\\task1_combined_human_focus.yaml",
+      "model": "C:\\TEKNOFEST\\_logs\\task1_training\\combined_yolo11s_human_focus_finetune\\weights\\last.pt",
+      "requested_epochs": 12,
+      "requested_batch": 8,
+      "effective_batch": null,
+      "best_weights_path": null,
+      "training_metrics": null,
+      "holdout_metrics": null,
+      "learning_dynamics": null,
+      "peak_vram_mb": null
     }
   }
 }

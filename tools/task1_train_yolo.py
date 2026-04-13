@@ -226,6 +226,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--batch", type=int)
     parser.add_argument("--imgsz", type=int)
     parser.add_argument("--model")
+    parser.add_argument("--data-yaml")
     parser.add_argument("--device", default="0")
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--run-name")
@@ -233,7 +234,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     defaults = get_training_experiment_defaults(args.experiment)
-    yaml_path = Path(defaults["yaml_path"])
+    yaml_path = Path(args.data_yaml) if args.data_yaml else Path(defaults["yaml_path"])
     result_payload = _load_results_payload()
     result_key = args.result_key or args.experiment
     result_entry: dict[str, Any] = {

@@ -51,6 +51,11 @@ from src.task1.experimental.training_support import (
     render_experiment_results_markdown,
     summarize_learning_dynamics,
 )
+from src.task1.experimental.human_focus import (
+    build_human_focus_dataset,
+    collect_human_focus_audit,
+    render_human_focus_audit_markdown,
+)
 
 __all__ = [
     "ArtifactProbe",
@@ -69,12 +74,14 @@ __all__ = [
     "TileWindow",
     "build_combined_yolo_dataset",
     "build_data_quality_report",
+    "build_human_focus_dataset",
     "build_local_label_pair_summary",
     "build_local_yolo_dataset",
     "build_tile_windows",
     "canonical_task1_class_from_uavdt_label",
     "canonical_task1_class_from_visdrone_category",
     "collect_repo_file_inventory",
+    "collect_human_focus_audit",
     "connect_explicit_dataset",
     "collect_split_class_support",
     "convert_visdrone_to_yolo",
@@ -93,6 +100,7 @@ __all__ = [
     "probe_optional_dependencies",
     "render_experiment_results_markdown",
     "render_class_mapping_report",
+    "render_human_focus_audit_markdown",
     "render_training_plan_markdown",
     "split_local_dataset_by_frame_index",
     "stage_unlabeled_local_videos",
