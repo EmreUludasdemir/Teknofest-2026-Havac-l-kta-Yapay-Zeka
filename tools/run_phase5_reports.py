@@ -11,11 +11,12 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.config.settings import MvpRuntimeSettings
 from src.evaluation.task2_long_sequence import evaluate_task2_long_sequences
 from src.evaluation.task3_baseline import evaluate_task3_baseline
+from src.tools.report_paths import GENERATED_REPORTS_ROOT
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="TEKNOFEST Faz 5 replay raporlari")
-    parser.add_argument("--output-dir", default="reports")
+    parser.add_argument("--output-dir", default=str(GENERATED_REPORTS_ROOT))
     parser.add_argument("--task2-limit", type=int, default=600)
     parser.add_argument("--task2-stride", type=int, default=4)
     parser.add_argument("--task3-limit", type=int, default=90)

@@ -14,6 +14,7 @@ from src.core.utils import infer_modality
 from src.core.vision import is_cv2_available
 from src.task2.estimator import Task2Estimator
 from src.task2.health_logic import resolve_task2_translation
+from src.tools.report_paths import GENERATED_REPORTS_ROOT
 
 if is_cv2_available():  # pragma: no branch - ortama bagli
     from src.core.vision import cv2
@@ -223,7 +224,7 @@ def evaluate_task2_long_sequences(
     *,
     runtime_settings: MvpRuntimeSettings | None = None,
     root_dir: str | Path | None = None,
-    output_dir: str | Path = "reports",
+    output_dir: str | Path = GENERATED_REPORTS_ROOT,
 ) -> dict[str, object]:
     settings = runtime_settings or MvpRuntimeSettings()
     output_path = Path(output_dir)

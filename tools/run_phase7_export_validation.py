@@ -11,6 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.config.settings import MvpRuntimeSettings
 from src.evaluation.task1_onnx_validation import validate_task1_onnx_export
+from src.tools.report_paths import EXPORT_REPORTS_DIR
 
 
 def _default_model_dir() -> Path:
@@ -19,7 +20,7 @@ def _default_model_dir() -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="TEKNOFEST Faz 7 ONNX export validation")
-    parser.add_argument("--output-dir", default="reports/export")
+    parser.add_argument("--output-dir", default=str(EXPORT_REPORTS_DIR))
     parser.add_argument("--candidate", default="yolo26n")
     parser.add_argument("--fallback", default="yolo11n")
     parser.add_argument("--device", default="cuda:0")

@@ -19,6 +19,7 @@ from src.task1.landing_logic import assign_landing_status
 from src.task1.motion_logic import assign_motion_status
 from src.task1.postprocess import deduplicate_detections
 from src.task1.tracker import Task1Tracker
+from src.tools.report_paths import EXPORT_REPORTS_DIR
 from src.tools.vram_monitor import query_vram, recovery_mb
 
 if is_cv2_available():  # pragma: no branch - ortama bagli
@@ -276,7 +277,7 @@ def validate_task1_onnx_export(
     runtime_settings: MvpRuntimeSettings,
     *,
     candidate_name: str = "yolo26n",
-    output_dir: str | Path = "reports/export",
+    output_dir: str | Path = EXPORT_REPORTS_DIR,
     logger: StructuredLogger | None = None,
 ) -> dict[str, Any]:
     logger = logger or StructuredLogger()

@@ -12,6 +12,7 @@ from src.task3.matcher import Task3Matcher
 from src.task3.no_match_logic import filter_no_match_candidates
 from src.task3.reference_cache import ReferenceCache
 from src.task3.verifier import verify_matches
+from src.tools.report_paths import GENERATED_REPORTS_ROOT
 
 
 def discover_task3_videos(reference_dir: str | Path | None = None) -> list[Path]:
@@ -130,7 +131,7 @@ def evaluate_task3_frames(
 def evaluate_task3_baseline(
     *,
     runtime_settings: MvpRuntimeSettings | None = None,
-    output_dir: str | Path = "reports",
+    output_dir: str | Path = GENERATED_REPORTS_ROOT,
     mode: str = "orb_template",
 ) -> dict[str, object]:
     settings = runtime_settings or MvpRuntimeSettings()

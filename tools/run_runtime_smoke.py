@@ -20,6 +20,7 @@ from src.pipeline.replay_runner import BatchManifestReplayRunner, ReplayOptions
 from src.server.final_sequential_adapter import FinalSequentialAdapter
 from src.server.official_repo_batch_adapter import OfficialRepoBatchAdapter
 from src.tools.mock_server import OfficialRepoMockServer
+from src.tools.report_paths import EXPORT_REPORTS_DIR
 from src.tools.runtime_package import prepare_runtime_package
 
 
@@ -28,7 +29,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mode", choices=("batch", "sequential"), default="batch")
     parser.add_argument("--frames", type=int, default=2)
     parser.add_argument("--base-dir", default="final_runtime")
-    parser.add_argument("--reports-dir", default="reports/export")
+    parser.add_argument("--reports-dir", default=str(EXPORT_REPORTS_DIR))
     args = parser.parse_args(argv)
 
     package_settings = MvpRuntimeSettings(

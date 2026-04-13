@@ -17,6 +17,7 @@ from src.core.logger import StructuredLogger
 from src.core.utils import percentile
 from src.core.vision import decode_image_bytes, is_cv2_available
 from src.task1.detector import LocalModelDetectorBackend
+from src.tools.report_paths import PROFILING_REPORTS_DIR
 from src.tools.vram_monitor import VramSnapshot, query_vram, recovery_mb
 
 if is_cv2_available():  # pragma: no branch - ortama bagli
@@ -312,7 +313,7 @@ def build_candidate_registry(
 def evaluate_candidates(
     *,
     runtime_settings: MvpRuntimeSettings | None = None,
-    output_dir: str | Path = "reports/profiling",
+    output_dir: str | Path = PROFILING_REPORTS_DIR,
     mode: str = "smoke",
     task: str | None = None,
     candidate: str | None = None,
@@ -542,7 +543,7 @@ def candidate_result_to_dict(result: CandidateResult) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="TEKNOFEST Faz 5 profiling harness")
     parser.add_argument("--mode", default="smoke", choices=("smoke", "full"))
-    parser.add_argument("--output-dir", default="reports/profiling")
+    parser.add_argument("--output-dir", default=str(PROFILING_REPORTS_DIR))
     parser.add_argument("--task", choices=("task1", "task2", "task3"))
     parser.add_argument("--candidate")
     parser.add_argument("--model-path")

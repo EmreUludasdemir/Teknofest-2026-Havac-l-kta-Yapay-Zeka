@@ -17,6 +17,7 @@ from src.evaluation.task1_onnx_validation import (
     validate_task1_onnx_export,
 )
 from src.exports.export_trt import export_task1_candidate_to_trt
+from src.tools.report_paths import EXPORT_REPORTS_DIR
 
 
 def validate_task1_trt_export(
@@ -24,7 +25,7 @@ def validate_task1_trt_export(
     *,
     primary_candidate: str = "yolo26n",
     fallback_candidate: str = "yolo11n",
-    output_dir: str | Path = "reports/export",
+    output_dir: str | Path = EXPORT_REPORTS_DIR,
     logger: StructuredLogger | None = None,
 ) -> dict[str, Any]:
     logger = logger or StructuredLogger()
@@ -195,7 +196,7 @@ def compare_task1_native_onnx_trt_runs(
 def build_task1_fallback_tree(
     *,
     runtime_settings: MvpRuntimeSettings,
-    reports_dir: str | Path = "reports/export",
+    reports_dir: str | Path = EXPORT_REPORTS_DIR,
 ) -> dict[str, Any]:
     base = Path(reports_dir)
     validation_map = {

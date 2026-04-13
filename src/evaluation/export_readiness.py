@@ -4,10 +4,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+from src.tools.report_paths import GENERATED_REPORTS_ROOT
+
 
 def evaluate_export_readiness(
     *,
-    reports_dir: str | Path = "reports",
+    reports_dir: str | Path = GENERATED_REPORTS_ROOT,
     tests_ok: bool = True,
 ) -> dict[str, Any]:
     base = Path(reports_dir)

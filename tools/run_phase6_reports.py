@@ -17,11 +17,12 @@ from src.evaluation.task2_long_sequence import (
     write_task2_comparison,
 )
 from src.evaluation.task3_baseline import evaluate_task3_baseline
+from src.tools.report_paths import GENERATED_REPORTS_ROOT
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="TEKNOFEST Faz 6 rapor orkestrasyonu")
-    parser.add_argument("--output-dir", default="reports")
+    parser.add_argument("--output-dir", default=str(GENERATED_REPORTS_ROOT))
     parser.add_argument("--task2-limit", type=int, default=600)
     parser.add_argument("--task2-stride", type=int, default=4)
     parser.add_argument("--task3-limit", type=int, default=45)

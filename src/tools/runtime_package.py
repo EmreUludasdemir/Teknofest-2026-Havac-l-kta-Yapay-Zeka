@@ -6,13 +6,14 @@ from pathlib import Path
 from typing import Any
 
 from src.config.settings import MvpRuntimeSettings
+from src.tools.report_paths import EXPORT_REPORTS_DIR
 
 
 def prepare_runtime_package(
     runtime_settings: MvpRuntimeSettings,
     *,
     base_dir: str | Path = "final_runtime",
-    reports_dir: str | Path = "reports/export",
+    reports_dir: str | Path = EXPORT_REPORTS_DIR,
 ) -> dict[str, Any]:
     base = Path(base_dir)
     reports_base = Path(reports_dir)
