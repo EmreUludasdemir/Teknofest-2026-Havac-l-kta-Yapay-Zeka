@@ -1,64 +1,36 @@
-# Task 1 RF-DETR Risks
+# Task 1 Experimental Risks
 
-**Date:** 2026-04-09  
+**Date:** 2026-04-12
 **Branch:** `feature/task1-rfdetr-sahi`
 
-## Primary risks
+## Active Risks
 
-### 1. No connected RF-DETR artefact yet
+### 1. Proxy metrics are not AP evidence
 
-- No local RF-DETR or RF-DETR-Base weight was found under `C:\Users\Emre\.teknofest_models`
-- Without a real detector artefact, this branch cannot yet produce a fair result against `yolo26n`
+- Zero-detection rate, duplicate ratio and small-box count are only directional probes on unlabeled sample video.
+- They cannot justify a merge decision on their own.
 
-### 2. Target aerial datasets are not locally connected
+### 2. Labeled aerial dataset is still missing
 
-- `VisDrone2019-DET` not found in checked local roots
-- `UAVDT` not found in checked local roots
-- Repo-local TEKNOFEST sample videos exist, but they are not a complete labeled small-object benchmark for mAP reporting
+- No local VisDrone/UAVDT or explicit labeled dataset is connected.
 
-### 3. Current experimental Python entry point is unhealthy
+### 3. Tiled probe may improve recall proxy at a latency / duplicate cost
 
-- `C:\Users\Emre\.venvs\teknofest-gpu\Scripts\python.exe` resolves to a missing base interpreter in this shell
-- This blocks direct verification of RF-DETR / SAHI / augmentation dependencies from the current environment
+- Manual tiling is intentionally branch-local and evaluator-only.
+- It must not be sold as SAHI success or production-ready behavior.
 
-### 4. No label-aware branch comparison harness exists yet
+### 4. Transformer path remains blocked
 
-- Current repo has:
-  - runtime profiling coverage
-  - sampled replay coverage
-  - post-detector Task 1 logic coverage
-- Current repo does not yet have a completed label-aware RF-DETR-vs-yolo26n evaluator for:
-  - overall mAP
-  - small-object AP
-  - per-class AP
-  - motion-status-sensitive performance
-  - landing-status-sensitive performance
+- RT-DETR / RF-DETR artefacts are not locally connected.
+- Any transformer-first claim would still be fabricated.
 
-### 5. SAHI misuse risk
+### 5. UAP/UAI coverage is still weakly evidenced
 
-- Inference-only SAHI without tile-aware training would create an unfair and likely misleading comparison
-- This branch must keep SAHI as a train/infer-paired experiment
+- Current local smoke path and sample replay only validate that classes 0/1 are exercised.
+- UAP/UAI performance remains an open risk until labeled data is connected.
 
-## Risk impact
+## Current Blocker List
 
-| Risk | Impact | Current state |
-| --- | --- | --- |
-| Missing RF-DETR artefact | High | active |
-| Missing VisDrone/UAVDT | High | active |
-| Broken experiment Python runtime | High | active |
-| No label-aware AP harness yet | Medium | active |
-| SAHI train/infer mismatch | Medium | avoid by design |
-
-## Immediate mitigation order
-
-1. Connect a real local RF-DETR-Base weight or training output
-2. Connect `VisDrone2019-DET`
-3. Connect `UAVDT`
-4. Repair the current experiment Python runtime
-5. Add the label-aware Task 1 comparison harness on top of existing baseline artefacts
-
-## Current branch posture
-
-`EXPERIMENTAL ONLY`
-
-This branch is worth continuing, but only after the missing detector artefact, datasets, and runnable Python entry point are restored.
+- all_sample_frames_zero_detection
+- no_uap_uai_predictions_seen_in_proxy_run
+- no_supported_labeled_dataset_found

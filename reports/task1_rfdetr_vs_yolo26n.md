@@ -1,91 +1,90 @@
-# Task 1 RF-DETR vs YOLO26n
+# Task 1 YOLO-First Experimental Comparison
 
-**Date:** 2026-04-09  
-**Branch:** `feature/task1-rfdetr-sahi`  
+**Date:** 2026-04-12
+**Branch:** `feature/task1-rfdetr-sahi`
 **Decision:** `EXPERIMENTAL ONLY`
 
-## Summary
+## Current Truth
 
-This branch kickoff confirmed that the current `yolo26n` production path already has reusable runtime and sampled replay validation artefacts. The RF-DETR side is not yet runnable from this branch kickoff because the detector weights and higher-priority aerial datasets are not locally connected, and the current GPU venv Python entry point is broken in this shell.
+- Task 1 is the only active score-up branch.
+- Task 2 remains frozen with no merge candidate.
+- Task 3 remains blocked by missing real YOLOE weight.
+- Short-term direction on this branch is YOLO-first proxy comparison, not RF-DETR-first swap.
 
-The branch therefore remains `EXPERIMENTAL ONLY` at kickoff. No production swap is recommended.
+## Runtime and Dependency State
 
-## Current yolo26n baseline evidence
+- Selected Python: `C:\Users\Emre\.venvs\teknofest-gpu\Scripts\python.exe`
+- Version: `3.12.10`
+- Repo compatible: `True`
+- `teknofest-gpu` venv status: `callable`
+- The teknofest-gpu venv entry point is callable from the repaired Python 3.12 environment.
+- Optional dependencies: `{'cv2': True, 'ultralytics': True, 'torch': True, 'timm': True, 'transformers': False, 'sahi': False, 'onnxruntime': True, 'tensorrt': True}`
 
-### Runtime profiling baseline
+## Local Artefact Truth
 
-Source files:
+- `yolo26n` count: `2`
+- `yolo11n` count: `2`
+- `rtdetr` count: `0`
+- `rfdetr` count: `0`
 
-- `reports/profiling/task1_real_profile_gpu.json`
-- `reports/profiling/task1_real_profile_cpu.json`
-- `reports/profiling/task1_real_profile_comparison.md`
+## Dataset Truth
 
-Key baseline values:
+- Connected dataset roots: `0`
+- No local labeled aerial dataset is connected. Real AP comparison remains blocked.
 
-| Metric | yolo26n GPU | yolo26n CPU |
-| --- | --- | --- |
-| Available | yes | yes |
-| Cold load ms | 105.455 | 90.965 |
-| Warm p50 ms | 27.115 | 105.785 |
-| Warm p95 ms | 220.6496 | 176.3422 |
-| Peak VRAM MB | 212.0 | 0.0 |
+## Variant Results
 
-### Current replay-style sampled pipeline baseline
+### `candidate_tiled_probe`
 
-Source file:
+- status: `proxy_only`
+- candidate: `yolo11s_exp2_smoke`
+- artifact: `C:\TEKNOFEST\_logs\task1_training\exp2_combined_smoke\weights\best.pt`
+- mode: `tiled_yolo`
+- sahi status: `manual_tiling_probe_only_not_sahi`
+- runtime profile p50 ms: `None`
+- runtime profile p95 ms: `None`
+- proxy replay p50 ms: `279.8045`
+- proxy replay p95 ms: `8025.4099`
+- zero-detection rate: `1.0`
+- duplicate ratio: `0.0`
+- small box count: `0`
+- class histogram: `{}`
+- tile probe: `{'tile_count_total': 48, 'raw_detection_count': 0, 'merged_detection_count': 0, 'tile_merge_duplicate_ratio': 0.0}`
+- issues: `['all_sample_frames_zero_detection', 'no_uap_uai_predictions_seen_in_proxy_run']`
 
-- `reports/export/task1_yolo26n_native_vs_onnx.json`
+### `candidate_probe`
 
-Key values:
+- status: `proxy_only`
+- candidate: `yolo11s_exp2_smoke`
+- artifact: `C:\TEKNOFEST\_logs\task1_training\exp2_combined_smoke\weights\best.pt`
+- mode: `single_yolo`
+- sahi status: `not_applicable`
+- runtime profile p50 ms: `None`
+- runtime profile p95 ms: `None`
+- proxy replay p50 ms: `35.216`
+- proxy replay p95 ms: `457.8774`
+- zero-detection rate: `1.0`
+- duplicate ratio: `0.0`
+- small box count: `0`
+- class histogram: `{}`
+- issues: `['all_sample_frames_zero_detection', 'no_uap_uai_predictions_seen_in_proxy_run']`
 
-| Metric | Value |
-| --- | --- |
-| Validation video | `THYZ_2026_Ornek_Veri_1.MP4` |
-| Sample count | 10 |
-| Native latency p50 ms | 60.8125 |
-| ONNX latency p50 ms | 52.732 |
-| Native peak VRAM MB | 2589.0 |
-| ONNX peak VRAM MB | 2661.0 |
-| ONNX parity accepted | true |
+## Proxy Summary
 
-## RF-DETR experimental status at branch kickoff
+- best latency variant: `candidate_probe`
+- lowest zero-detection variant: `candidate_tiled_probe`
+- highest small-box variant: `None`
+- control outcome: `None`
+- tiled probe outcome: `None`
+- comparisons: `{}`
 
-| Item | Status |
-| --- | --- |
-| RF-DETR local weight | not connected |
-| SAHI train/infer stack | planned, not verified |
-| VisDrone2019-DET | not locally connected |
-| UAVDT | not locally connected |
-| TEKNOFEST sample videos | connected |
-| 4-class canonical Task 1 wrapper path | reusable via current tracker/motion/landing logic |
+## Label-Aware State
 
-## Fair comparison path to use
-
-The branch will compare RF-DETR against the current `yolo26n` path using:
-
-1. Existing baseline runtime harness:
-   - `src/tools/profiling_harness.py`
-2. Existing sampled replay pipeline:
-   - `src/evaluation/task1_onnx_validation.py`
-3. Current Task 1 logic after detector output:
-   - tracker
-   - motion classification
-   - landing suitability
-4. New label-aware comparison slices once data is connected:
-   - overall mAP
-   - small-object AP
-   - per-class AP
-   - motion-status-sensitive performance
-   - landing-status-sensitive performance
-   - runtime
-   - VRAM
-
-## Current blockers to a real RF-DETR vs yolo26n result
-
-- No local RF-DETR detector weight found under `C:\Users\Emre\.teknofest_models`
-- No local `VisDrone2019-DET` or `UAVDT` directory found in the checked roots
-- No repo-local labeled aerial Task 1 benchmark was found beyond sample videos
-- Current `teknofest-gpu` venv Python entry point is broken from this shell
+- status: `blocked_by_labels`
+- dataset root: `None`
+- labels format: `None`
+- No local labeled aerial dataset is connected.
+- Proxy comparison is the only honest result currently available.
 
 ## Recommendation
 
@@ -93,7 +92,7 @@ The branch will compare RF-DETR against the current `yolo26n` path using:
 
 Reason:
 
-- baseline path is clear and reusable
-- RF-DETR path is architecturally reasonable
-- but there is no honest experimental score-up result yet
-- production defaults must remain untouched until a real like-for-like comparison exists
+- YOLO-first proxy comparison is now runnable on real local artefacts.
+- Manual tiling is available as an evaluator-only small-object probe.
+- Real label-aware AP comparison is still blocked by missing labeled aerial data.
+- RT-DETR / RF-DETR remain gate-only because local artefacts are absent.

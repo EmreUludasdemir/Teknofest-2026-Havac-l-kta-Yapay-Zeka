@@ -1,74 +1,362 @@
 {
-  "date": "2026-04-09",
+  "date": "2026-04-12",
   "branch": "feature/task1-rfdetr-sahi",
   "decision": "EXPERIMENTAL ONLY",
-  "baseline": {
-    "candidate": "yolo26n",
-    "runtime_profile_sources": [
-      "reports/profiling/task1_real_profile_gpu.json",
-      "reports/profiling/task1_real_profile_cpu.json",
-      "reports/profiling/task1_real_profile_comparison.md"
-    ],
-    "gpu": {
-      "available": true,
-      "cold_load_latency_ms": 105.455,
-      "warm_p50_latency_ms": 27.115,
-      "warm_p95_latency_ms": 220.64959999999994,
-      "peak_vram_mb": 212.0
+  "truth_backbone": {
+    "task1_status": "active_score_up_branch",
+    "task2_status": "FROZEN_NO_MERGE_CANDIDATE",
+    "task3_status": "WEIGHT_MISSING",
+    "stale_reports": [
+      "reports/scoreup_priority_summary.md",
+      "reports/task3_weight_watchpoint.md"
+    ]
+  },
+  "environment": {
+    "python_runtime": {
+      "selected_path": "C:\\Users\\Emre\\.venvs\\teknofest-gpu\\Scripts\\python.exe",
+      "version": "3.12.10",
+      "is_repo_compatible": true,
+      "checked": [
+        {
+          "path": "C:\\Users\\Emre\\.venvs\\teknofest-gpu\\Scripts\\python.exe",
+          "status": "ok",
+          "version": "3.12.10",
+          "reported_executable": "C:\\Users\\Emre\\.venvs\\teknofest-gpu\\Scripts\\python.exe"
+        },
+        {
+          "path": "C:\\Users\\Emre\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+          "status": "ok",
+          "version": "3.12.10",
+          "reported_executable": "C:\\Users\\Emre\\AppData\\Local\\Programs\\Python\\Python312\\python.exe"
+        }
+      ],
+      "issues": []
     },
-    "cpu": {
-      "available": true,
-      "cold_load_latency_ms": 90.965,
-      "warm_p50_latency_ms": 105.785,
-      "warm_p95_latency_ms": 176.3422,
-      "peak_vram_mb": 0.0
+    "optional_dependencies": {
+      "cv2": true,
+      "ultralytics": true,
+      "torch": true,
+      "timm": true,
+      "transformers": false,
+      "sahi": false,
+      "onnxruntime": true,
+      "tensorrt": true
     },
-    "sampled_replay_source": "reports/export/task1_yolo26n_native_vs_onnx.json",
-    "sampled_replay": {
-      "validation_video": "data\\THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001\\THYZ_2026_Ornek_Veri_Seti\\THYZ_2026_Ornek_Veri_1.MP4",
-      "sample_count": 10,
-      "native_latency_p50_ms": 60.8125,
-      "onnx_latency_p50_ms": 52.732,
-      "native_peak_vram_mb": 2589.0,
-      "onnx_peak_vram_mb": 2661.0,
-      "accepted": true
+    "teknofest_gpu_venv": {
+      "status": "callable",
+      "path": "C:\\Users\\Emre\\.venvs\\teknofest-gpu\\Scripts\\python.exe",
+      "note": "The teknofest-gpu venv entry point is callable from the repaired Python 3.12 environment."
     }
   },
-  "experimental": {
-    "candidate": "rfdetr-base+sahi",
-    "status": "not_run",
-    "local_weight_connected": false,
-    "sahi_stack_verified": false,
-    "dataset_connections": {
-      "visdrone2019_det": false,
-      "uavdt": false,
-      "teknofest_sample_frames": true,
-      "local_uap_uai_specific_data": false
+  "artifacts": {
+    "baseline_yolo26n_paths": [
+      "C:\\Users\\Emre\\.teknofest_models\\yolo26n.pt",
+      "C:\\Users\\Emre\\.teknofest_models\\yolo26n.onnx"
+    ],
+    "control_yolo11n_paths": [
+      "C:\\Users\\Emre\\.teknofest_models\\yolo11n.pt",
+      "C:\\Users\\Emre\\.teknofest_models\\yolo11n.onnx"
+    ],
+    "rtdetr_candidate_paths": [],
+    "rfdetr_candidate_paths": []
+  },
+  "datasets": [],
+  "requested_variants": [
+    "candidate_tiled_probe",
+    "candidate_probe"
+  ],
+  "variants": {
+    "candidate_tiled_probe": {
+      "description": "Branch-local trained candidate tiled replay.",
+      "mode": "tiled_yolo",
+      "candidate_name": "yolo11s_exp2_smoke",
+      "artifact_path": "C:\\TEKNOFEST\\_logs\\task1_training\\exp2_combined_smoke\\weights\\best.pt",
+      "status": "proxy_only",
+      "available": true,
+      "sahi_status": "manual_tiling_probe_only_not_sahi",
+      "tile_aware_training_required": false,
+      "notes": [
+        "Candidate path supplied explicitly by CLI.",
+        "Tile-aware training remains unverified."
+      ],
+      "issues": [
+        "all_sample_frames_zero_detection",
+        "no_uap_uai_predictions_seen_in_proxy_run"
+      ],
+      "runtime_profile": null,
+      "proxy_metrics": {
+        "validation_video": "data\\task1_staging\\unlabeled_local\\THYZ_2026_Ornek_Veri_1.MP4",
+        "sample_count": 8,
+        "runtime_identifier": "unknown",
+        "latency_mean_ms": 1766.99025,
+        "latency_p50_ms": 279.8045,
+        "latency_p95_ms": 8025.4099,
+        "peak_vram_mb": 2898.0,
+        "unload_recovery_mb": 106.0,
+        "aggregate_class_histogram": {},
+        "zero_detection_frames": 8,
+        "zero_detection_rate": 1.0,
+        "detections_before_dedup": 0,
+        "detections_after_dedup": 0,
+        "duplicate_ratio": 0.0,
+        "bbox_area_distribution": {
+          "count": 0,
+          "min": null,
+          "p25": null,
+          "p50": null,
+          "p75": null,
+          "max": null
+        },
+        "small_box_count": 0,
+        "small_box_ratio": 0.0,
+        "used_fallback": false,
+        "tile_probe": {
+          "tile_count_total": 48,
+          "raw_detection_count": 0,
+          "merged_detection_count": 0,
+          "tile_merge_duplicate_ratio": 0.0
+        },
+        "frames": [
+          {
+            "frame_index": 0,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 12184.945,
+            "tile_stats": {
+              "tile_count": 6,
+              "raw_detection_count": 0,
+              "merged_detection_count": 0
+            }
+          },
+          {
+            "frame_index": 1289,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 300.559,
+            "tile_stats": {
+              "tile_count": 6,
+              "raw_detection_count": 0,
+              "merged_detection_count": 0
+            }
+          },
+          {
+            "frame_index": 2577,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 282.068,
+            "tile_stats": {
+              "tile_count": 6,
+              "raw_detection_count": 0,
+              "merged_detection_count": 0
+            }
+          },
+          {
+            "frame_index": 3866,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 266.535,
+            "tile_stats": {
+              "tile_count": 6,
+              "raw_detection_count": 0,
+              "merged_detection_count": 0
+            }
+          },
+          {
+            "frame_index": 5155,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 282.021,
+            "tile_stats": {
+              "tile_count": 6,
+              "raw_detection_count": 0,
+              "merged_detection_count": 0
+            }
+          },
+          {
+            "frame_index": 6444,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 274.666,
+            "tile_stats": {
+              "tile_count": 6,
+              "raw_detection_count": 0,
+              "merged_detection_count": 0
+            }
+          },
+          {
+            "frame_index": 7732,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 277.588,
+            "tile_stats": {
+              "tile_count": 6,
+              "raw_detection_count": 0,
+              "merged_detection_count": 0
+            }
+          },
+          {
+            "frame_index": 9021,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 267.54,
+            "tile_stats": {
+              "tile_count": 6,
+              "raw_detection_count": 0,
+              "merged_detection_count": 0
+            }
+          }
+        ]
+      },
+      "label_aware_metrics": null
     },
-    "runtime_risk": "current_teknofest_gpu_python_entrypoint_broken"
+    "candidate_probe": {
+      "description": "Branch-local trained candidate replay.",
+      "mode": "single_yolo",
+      "candidate_name": "yolo11s_exp2_smoke",
+      "artifact_path": "C:\\TEKNOFEST\\_logs\\task1_training\\exp2_combined_smoke\\weights\\best.pt",
+      "status": "proxy_only",
+      "available": true,
+      "sahi_status": "not_applicable",
+      "tile_aware_training_required": false,
+      "notes": [
+        "Candidate path supplied explicitly by CLI."
+      ],
+      "issues": [
+        "all_sample_frames_zero_detection",
+        "no_uap_uai_predictions_seen_in_proxy_run"
+      ],
+      "runtime_profile": null,
+      "proxy_metrics": {
+        "validation_video": "data\\task1_staging\\unlabeled_local\\THYZ_2026_Ornek_Veri_1.MP4",
+        "sample_count": 8,
+        "runtime_identifier": "unknown",
+        "latency_mean_ms": 115.8835,
+        "latency_p50_ms": 35.216,
+        "latency_p95_ms": 457.8774,
+        "peak_vram_mb": 2900.0,
+        "unload_recovery_mb": 108.0,
+        "aggregate_class_histogram": {},
+        "zero_detection_frames": 8,
+        "zero_detection_rate": 1.0,
+        "detections_before_dedup": 0,
+        "detections_after_dedup": 0,
+        "duplicate_ratio": 0.0,
+        "bbox_area_distribution": {
+          "count": 0,
+          "min": null,
+          "p25": null,
+          "p50": null,
+          "p75": null,
+          "max": null
+        },
+        "small_box_count": 0,
+        "small_box_ratio": 0.0,
+        "used_fallback": false,
+        "tile_probe": null,
+        "frames": [
+          {
+            "frame_index": 0,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 682.296,
+            "tile_stats": null
+          },
+          {
+            "frame_index": 1289,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 35.958,
+            "tile_stats": null
+          },
+          {
+            "frame_index": 2577,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 41.1,
+            "tile_stats": null
+          },
+          {
+            "frame_index": 3866,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 30.694,
+            "tile_stats": null
+          },
+          {
+            "frame_index": 5155,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 33.511,
+            "tile_stats": null
+          },
+          {
+            "frame_index": 6444,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 34.474,
+            "tile_stats": null
+          },
+          {
+            "frame_index": 7732,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 37.983,
+            "tile_stats": null
+          },
+          {
+            "frame_index": 9021,
+            "bbox_count": 0,
+            "class_histogram": {},
+            "latency_ms": 31.052,
+            "tile_stats": null
+          }
+        ]
+      },
+      "label_aware_metrics": null
+    }
+  },
+  "proxy_summary": {
+    "status": "proxy_only",
+    "best_latency_variant": "candidate_probe",
+    "lowest_zero_detection_variant": "candidate_tiled_probe",
+    "highest_small_box_variant": null,
+    "control_outcome": null,
+    "tiled_probe_outcome": null,
+    "comparisons": {}
+  },
+  "label_aware_comparison": {
+    "status": "blocked_by_labels",
+    "dataset_root": null,
+    "labels_format": null,
+    "results": null,
+    "notes": [
+      "No local labeled aerial dataset is connected.",
+      "Proxy comparison is the only honest result currently available."
+    ],
+    "blockers": [
+      "no_supported_labeled_dataset_found"
+    ]
   },
   "comparison_path": {
-    "runtime_harness": "src/tools/profiling_harness.py::evaluate_candidates",
-    "sampled_replay_harness": "src/evaluation/task1_onnx_validation.py::run_task1_pipeline_on_samples",
+    "baseline_runtime_harness": "src/tools/profiling_harness.py::evaluate_candidates",
+    "sample_replay": "src/evaluation/task1_rfdetr_comparison.py::_run_variant_proxy_replay",
     "post_detector_logic": [
       "src/task1/tracker.py::Task1Tracker",
       "src/task1/motion_logic.py::assign_motion_status",
-      "src/task1/landing_logic.py::assign_landing_status"
-    ]
+      "src/task1/landing_logic.py::assign_landing_status",
+      "src/task1/postprocess.py::deduplicate_detections"
+    ],
+    "manual_tiling_probe": "src/evaluation/task1_rfdetr_comparison.py::_run_tiled_detector_on_frame",
+    "label_aware_metric_function": "src/evaluation/task1_rfdetr_comparison.py::compute_task1_label_aware_metrics"
   },
-  "branch_metrics_to_decide": [
-    "overall_mAP",
-    "small_object_AP",
-    "per_class_AP",
-    "motion_status_sensitive_performance",
-    "landing_status_sensitive_performance",
-    "runtime",
-    "vram_if_measurable"
-  ],
+  "recommended_paths": {
+    "short_term": "YOLO-first proxy comparison and tiled small-object probe",
+    "medium_term": "Labeled aerial dataset hookup, then label-aware YOLO tiled evaluation before transformer detector retry",
+    "risk_now": "RF-DETR/RT-DETR-first pivot remains blocked by missing local artifact and labeled dataset"
+  },
   "blockers": [
-    "no_local_rfdetr_weight_found_under_C:\\Users\\Emre\\.teknofest_models",
-    "no_local_visdrone2019_det_found_in_checked_roots",
-    "no_local_uavdt_found_in_checked_roots",
-    "current_teknofest_gpu_venv_python_entrypoint_is_broken_from_shell"
+    "all_sample_frames_zero_detection",
+    "no_uap_uai_predictions_seen_in_proxy_run",
+    "no_supported_labeled_dataset_found"
   ]
 }
