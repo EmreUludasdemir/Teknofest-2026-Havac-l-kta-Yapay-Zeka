@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from src.core.vision import is_cv2_available
 
@@ -19,6 +19,7 @@ class ReferenceCache:
     """Referans nesne metadata ve descriptor cache iskeleti."""
 
     items: dict[str, dict[str, Any]] = field(default_factory=dict)
+    IMAGE_EXTENSIONS: ClassVar[tuple[str, ...]] = (".jpg", ".jpeg", ".png", ".bmp", ".webp", ".pgm")
 
     def put(self, reference_id: str, payload: dict[str, Any]) -> None:
         self.items[reference_id] = payload
@@ -50,6 +51,8 @@ class ReferenceCache:
         orb = cv2.ORB_create(nfeatures=orb_features) if is_cv2_available() else None
         for candidate in sorted(directory.iterdir()):
             if not candidate.is_file():
+                continue
+            if candidate.suffix.lower() not in self.IMAGE_EXTENSIONS:
                 continue
             data = candidate.read_bytes()
             reference_id = candidate.stem

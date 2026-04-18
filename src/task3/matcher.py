@@ -81,11 +81,13 @@ class LearnedDescriptorEmbedder:
 
 @dataclass(slots=True)
 class Task3Matcher:
-    """Descriptor tabanli baseline; learned rerank yolu opsiyoneldir."""
+    """Descriptor tabanli baseline; learned ve YOLOE yollari opsiyoneldir."""
 
     reference_cache: ReferenceCache
     runtime_settings: MvpRuntimeSettings
     learned_embedder: LearnedDescriptorEmbedder | None = field(default=None)
+    experimental_backend: Any | None = field(default=None, init=False, repr=False)
+    last_run_info: dict[str, Any] = field(default_factory=dict, init=False)
 
     def match(
         self,
@@ -94,25 +96,90 @@ class Task3Matcher:
         reference_ids: list[str] | None = None,
         *,
         decoded_frame: DecodedFrame | None = None,
-        mode: str = "orb_template",
+        mode: str | None = None,
     ) -> list[CanonicalUndefinedObject]:
+        requested_mode = mode or self.runtime_settings.task3_mode
         available_ids = reference_ids or self.reference_cache.list_ids()
+        self.last_run_info = self._empty_task3_info(requested_mode=requested_mode, references_loaded=len(available_ids))
+
         if not available_ids:
+            self.last_run_info["effective_mode"] = "none"
             return []
 
+        if requested_mode == "yoloe_vp_lightglue":
+            try:
+                matches = self._match_with_yoloe_vp_lightglue(decoded_frame, available_ids)
+                self._finalize_info(matches, effective_mode="yoloe_vp_lightglue")
+                return matches
+            except Exception as exc:
+                self.last_run_info["fallback_reason"] = str(exc)
+
         if is_cv2_available() and decoded_frame is not None and decoded_frame.gray is not None:
-            if mode == "learned_descriptor":
+            if requested_mode == "learned_descriptor":
                 learned_matches = self._match_with_learned_descriptor(decoded_frame, available_ids)
                 if learned_matches:
+                    self._finalize_info(learned_matches, effective_mode="learned_descriptor")
                     return learned_matches
             matched = self._match_with_descriptors(decoded_frame, available_ids)
             if matched:
+                self._finalize_info(matched, effective_mode="orb_template")
                 return matched
             matched = self._match_with_template(decoded_frame, available_ids)
             if matched:
+                self._finalize_info(matched, effective_mode="orb_template")
                 return matched
 
-        return self._placeholder_match(frame, available_ids)
+        placeholder = self._placeholder_match(frame, available_ids)
+        self._finalize_info(placeholder, effective_mode="placeholder")
+        return placeholder
+
+    def _empty_task3_info(self, *, requested_mode: str, references_loaded: int) -> dict[str, Any]:
+        return {
+            "requested_mode": requested_mode,
+            "effective_mode": requested_mode if requested_mode != "yoloe_vp_lightglue" else "orb_template",
+            "fallback_reason": None,
+            "references_loaded": references_loaded,
+            "yoloe_inference_ms": 0.0,
+            "lightglue_verify_ms_total": 0.0,
+            "candidates_generated": 0,
+            "candidates_accepted": 0,
+            "candidates_rejected": 0,
+        }
+
+    def _finalize_info(self, matches: list[CanonicalUndefinedObject], *, effective_mode: str) -> None:
+        self.last_run_info["effective_mode"] = effective_mode
+        if not self.last_run_info.get("candidates_generated"):
+            self.last_run_info["candidates_generated"] = len(matches)
+        if not self.last_run_info.get("candidates_accepted"):
+            self.last_run_info["candidates_accepted"] = len(matches)
+
+    def _match_with_yoloe_vp_lightglue(
+        self,
+        decoded_frame: DecodedFrame | None,
+        reference_ids: list[str],
+    ) -> list[CanonicalUndefinedObject]:
+        if decoded_frame is None or decoded_frame.bgr is None:
+            raise RuntimeError("missing_decoded_frame")
+
+        try:
+            from src.task3.experimental.backend import (
+                Task3ExperimentalUnavailableError,
+                YoloeVpLightGlueBackend,
+            )
+        except Exception:
+            raise RuntimeError("backend_not_implemented")
+
+        if self.experimental_backend is None:
+            self.experimental_backend = YoloeVpLightGlueBackend(
+                reference_cache=self.reference_cache,
+                runtime_settings=self.runtime_settings,
+            )
+        try:
+            matches, task3_info = self.experimental_backend.match(decoded_frame=decoded_frame, reference_ids=reference_ids)
+        except Task3ExperimentalUnavailableError as exc:
+            raise RuntimeError(exc.reason) from exc
+        self.last_run_info.update(task3_info)
+        return matches
 
     def _collect_proposals(
         self,

@@ -61,10 +61,7 @@ def evaluate_task3_frames(
             health_status="1",
             metadata={"frame_index": decoded.frame_index, "image_width": decoded.width, "image_height": decoded.height},
         )
-        if mode == "learned_descriptor":
-            raw_matches = matcher.match(frame, b"", reference_ids, decoded_frame=decoded, mode="learned_descriptor")
-        else:
-            raw_matches = matcher.match(frame, b"", reference_ids, decoded_frame=decoded, mode="orb_template")
+        raw_matches = matcher.match(frame, b"", reference_ids, decoded_frame=decoded, mode=mode)
         if raw_matches:
             raw_candidate_frames += 1
         filtered = filter_no_match_candidates(
@@ -93,6 +90,11 @@ def evaluate_task3_frames(
             if "template" in source:
                 template_path_count += 1
                 if score < 0.88:
+                    false_positive_proxy_count += 1
+            elif "yoloe" in source:
+                descriptor_path_count += 1
+                yoloe_info = match.metadata.get("task3_yoloe", {})
+                if not bool(yoloe_info.get("verify_passed", False)):
                     false_positive_proxy_count += 1
             elif "learned" in source:
                 descriptor_path_count += 1
@@ -170,7 +172,12 @@ def evaluate_task3_baseline(
     if mode == "orb_template":
         (output_path / "task3_baseline_summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
         (output_path / "task3_baseline_table.md").write_text(render_task3_table(results), encoding="utf-8")
-    suffix = "orb" if mode == "orb_template" else "learned"
+    suffix_map = {
+        "orb_template": "orb",
+        "learned_descriptor": "learned",
+        "yoloe_vp_lightglue": "yoloe",
+    }
+    suffix = suffix_map.get(mode, mode.replace("-", "_"))
     (output_path / f"task3_baseline_{suffix}_summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     (output_path / f"task3_baseline_{suffix}_table.md").write_text(render_task3_table(results), encoding="utf-8")
     write_task3_comparison(output_path)

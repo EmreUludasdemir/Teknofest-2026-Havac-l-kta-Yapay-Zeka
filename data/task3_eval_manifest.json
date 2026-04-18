@@ -1,0 +1,80 @@
+{
+  "scenarios": [
+    {
+      "id": "rgb_reference_session",
+      "video": "data/THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001/THYZ_2026_Ornek_Veri_Seti/THYZ_2026_Ornek_Veri_1.MP4",
+      "references_dir": "data/references/2026_baseline",
+      "reference_mode": "present_targets",
+      "frame_stride": 90,
+      "frame_limit": 18,
+      "ground_truth": null,
+      "expected_present_refs": [
+        "ref_01",
+        "ref_02",
+        "ref_03",
+        "ref_04",
+        "ref_05",
+        "ref_06"
+      ],
+      "tags": [
+        "scale",
+        "angle",
+        "small_object",
+        "camera_motion"
+      ]
+    },
+    {
+      "id": "thermal_cross_sensor_proxy",
+      "video": "data/THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001/THYZ_2026_Ornek_Veri_Seti/THYZ_2026_Ornek_Veri_2_Termal.MP4",
+      "references_dir": "data/references/2026_baseline",
+      "reference_mode": "present_targets",
+      "frame_stride": 90,
+      "frame_limit": 16,
+      "ground_truth": null,
+      "expected_present_refs": [
+        "ref_01",
+        "ref_02",
+        "ref_03",
+        "ref_04",
+        "ref_05",
+        "ref_06"
+      ],
+      "tags": [
+        "thermal",
+        "cross_sensor",
+        "degraded",
+        "occlusion"
+      ]
+    },
+    {
+      "id": "rgb_absent_target_proxy_2025",
+      "video": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-1-RGB.MP4",
+      "references_dir": "data/references/2026_baseline",
+      "reference_mode": "synthetic_absent",
+      "frame_stride": 120,
+      "frame_limit": 12,
+      "ground_truth": null,
+      "expected_present_refs": [],
+      "tags": [
+        "absent_target",
+        "camera_motion",
+        "clutter"
+      ]
+    },
+    {
+      "id": "thermal_absent_target_proxy_2025",
+      "video": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-2-Termal.MP4",
+      "references_dir": "data/references/2026_baseline",
+      "reference_mode": "synthetic_absent",
+      "frame_stride": 120,
+      "frame_limit": 12,
+      "ground_truth": null,
+      "expected_present_refs": [],
+      "tags": [
+        "absent_target",
+        "thermal",
+        "degraded"
+      ]
+    }
+  ]
+}

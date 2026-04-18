@@ -13,6 +13,18 @@ def _default_reference_dir() -> Path:
     return _project_root() / "data" / "THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001" / "THYZ_2026_Ornek_Veri_Seti" / "THYZ_2026_Ornek_Veri_1_Referans_Nesneler"
 
 
+def _default_task3_eval_reference_dir() -> Path:
+    return _project_root() / "data" / "references" / "2026_baseline"
+
+
+def _default_task3_eval_manifest_path() -> Path:
+    return _project_root() / "data" / "task3_eval_manifest.json"
+
+
+def _default_task3_yoloe_weight_path() -> Path:
+    return _project_root() / "data" / "weights" / "task3" / "yoloe-11m-seg.pt"
+
+
 def _default_calibration_path() -> Path:
     return _project_root() / "data" / "THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001" / "THYZ_2026_Ornek_Veri_Seti" / "Kamera_Kalibrasyon_Parametreleri_2026.txt"
 
@@ -149,8 +161,10 @@ class MvpRuntimeSettings:
     task2_anchor_distance_limit_z: float = 4.0
     task2_eval_frame_stride: int = 4
     task2_eval_sequence_limit: int | None = None
+    task3_mode: str = "orb_template"
     task3_reference_dir: Path = field(default_factory=_default_reference_dir)
-    task3_eval_reference_dir: Path = field(default_factory=_default_reference_dir)
+    task3_eval_reference_dir: Path = field(default_factory=_default_task3_eval_reference_dir)
+    task3_eval_manifest_path: Path = field(default_factory=_default_task3_eval_manifest_path)
     task3_eval_frame_stride: int = 60
     task3_eval_frame_limit: int | None = 120
     task3_orb_features: int = 256
@@ -164,6 +178,18 @@ class MvpRuntimeSettings:
     task3_learned_pretrained: bool = True
     task3_min_score: float = 0.70
     task3_ambiguity_margin: float = 0.05
+    task3_yoloe_weight_path: Path = field(default_factory=_default_task3_yoloe_weight_path)
+    task3_yoloe_device: str | None = None
+    task3_yoloe_allow_cpu: bool = False
+    task3_yoloe_conf: float = 0.10
+    task3_yoloe_iou: float = 0.50
+    task3_yoloe_imgsz: int = 1280
+    task3_yoloe_max_det_per_class: int = 5
+    task3_yoloe_verify_every_k: int = 1
+    task3_lightglue_min_matches: int = 15
+    task3_superpoint_max_kpts: int = 1024
+    task3_min_crop_side: int = 24
+    task3_resize_crop_to: int = 256
     profiling_gpu_query_cmd: tuple[str, ...] = (
         "nvidia-smi",
         "--query-gpu=memory.used,memory.total",

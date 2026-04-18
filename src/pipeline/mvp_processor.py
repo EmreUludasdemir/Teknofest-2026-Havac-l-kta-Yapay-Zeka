@@ -52,6 +52,7 @@ class MvpFrameProcessor:
                 "task1_status": "pending",
                 "task2_status": "pending",
                 "task3_status": "pending",
+                "task3_info": {},
                 "fallback_mode": None,
                 "reference_cache_size": len(self.reference_cache.list_ids()),
                 "modality": decoded_frame.modality,
@@ -106,29 +107,37 @@ class MvpFrameProcessor:
                 result.diagnostics["fallback_mode"] = "task1"
 
         try:
-            matches = self.task3_matcher.match(
+            raw_matches = self.task3_matcher.match(
                 frame,
                 image_bytes,
                 self.reference_cache.list_ids(),
                 decoded_frame=decoded_frame,
+                mode=self.runtime_settings.task3_mode,
             )
             matches = filter_no_match_candidates(
-                matches,
+                raw_matches,
                 min_score=self.runtime_settings.task3_min_score,
                 ambiguity_margin=self.runtime_settings.task3_ambiguity_margin,
             )
-            matches = verify_matches(
+            verified_matches = verify_matches(
                 frame,
                 matches,
                 decoded_frame=decoded_frame,
                 min_inliers=self.runtime_settings.task3_match_min_inliers,
             )
-            result.detected_undefined_objects.extend(matches)
+            result.detected_undefined_objects.extend(verified_matches)
+            task3_info = dict(self.task3_matcher.last_run_info)
+            generated_count = int(task3_info.get("candidates_generated", 0) or len(raw_matches))
+            task3_info["candidates_generated"] = generated_count
+            task3_info["candidates_accepted"] = len(verified_matches)
+            task3_info["candidates_rejected"] = max(generated_count - len(verified_matches), 0)
+            result.diagnostics["task3_info"] = task3_info
             result.diagnostics["task3_status"] = "ok"
         except Exception as exc:
             result.detected_undefined_objects = []
             result.diagnostics["task3_status"] = "fallback"
             result.diagnostics["task3_error"] = str(exc)
+            result.diagnostics["task3_info"] = dict(self.task3_matcher.last_run_info)
             if result.diagnostics["fallback_mode"] is None:
                 result.diagnostics["fallback_mode"] = "task3"
 

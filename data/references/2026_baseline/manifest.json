@@ -1,0 +1,85 @@
+{
+  "source_video": "data\\THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001\\THYZ_2026_Ornek_Veri_Seti\\THYZ_2026_Ornek_Veri_1.MP4",
+  "spec_path": "data\\references\\specs\\2026_baseline_v1.json",
+  "reference_count": 6,
+  "items": [
+    {
+      "reference_id": "ref_01",
+      "frame_idx": 1800,
+      "bbox": [
+        248,
+        146,
+        367,
+        432
+      ],
+      "difficulty_tag": "easy",
+      "source_video": "data\\THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001\\THYZ_2026_Ornek_Veri_Seti\\THYZ_2026_Ornek_Veri_1.MP4",
+      "output_file": "ref_01.jpg"
+    },
+    {
+      "reference_id": "ref_02",
+      "frame_idx": 900,
+      "bbox": [
+        1602,
+        304,
+        1817,
+        361
+      ],
+      "difficulty_tag": "medium",
+      "source_video": "data\\THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001\\THYZ_2026_Ornek_Veri_Seti\\THYZ_2026_Ornek_Veri_1.MP4",
+      "output_file": "ref_02.jpg"
+    },
+    {
+      "reference_id": "ref_03",
+      "frame_idx": 300,
+      "bbox": [
+        0,
+        247,
+        583,
+        1080
+      ],
+      "difficulty_tag": "hard",
+      "source_video": "data\\THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001\\THYZ_2026_Ornek_Veri_Seti\\THYZ_2026_Ornek_Veri_1.MP4",
+      "output_file": "ref_03.jpg"
+    },
+    {
+      "reference_id": "ref_04",
+      "frame_idx": 300,
+      "bbox": [
+        510,
+        465,
+        923,
+        1048
+      ],
+      "difficulty_tag": "easy",
+      "source_video": "data\\THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001\\THYZ_2026_Ornek_Veri_Seti\\THYZ_2026_Ornek_Veri_1.MP4",
+      "output_file": "ref_04.jpg"
+    },
+    {
+      "reference_id": "ref_05",
+      "frame_idx": 300,
+      "bbox": [
+        184,
+        638,
+        493,
+        787
+      ],
+      "difficulty_tag": "medium",
+      "source_video": "data\\THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001\\THYZ_2026_Ornek_Veri_Seti\\THYZ_2026_Ornek_Veri_1.MP4",
+      "output_file": "ref_05.jpg"
+    },
+    {
+      "reference_id": "ref_06",
+      "frame_idx": 1800,
+      "bbox": [
+        286,
+        360,
+        354,
+        521
+      ],
+      "difficulty_tag": "hard",
+      "source_video": "data\\THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001\\THYZ_2026_Ornek_Veri_Seti\\THYZ_2026_Ornek_Veri_1.MP4",
+      "output_file": "ref_06.jpg"
+    }
+  ]
+}

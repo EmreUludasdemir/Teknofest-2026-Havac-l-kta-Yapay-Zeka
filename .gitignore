@@ -1,7 +1,22 @@
 # TEKNOFEST - GitHub'a kodu tasirken buyuk veri ve runtime coplerini disarida tut.
 
 # Yarisma / ornek veri setleri
-data/
+data/*
+!data/task3_eval_manifest.json
+!data/references/
+data/references/*
+!data/references/specs/
+data/references/specs/*
+!data/references/specs/*.json
+!data/references/2026_baseline/
+data/references/2026_baseline/*
+!data/references/2026_baseline/*.jpg
+!data/references/2026_baseline/manifest.json
+!data/weights/
+data/weights/*
+!data/weights/task3/
+data/weights/task3/*
+!data/weights/task3/.gitkeep
 
 # Lokal loglar ve cache
 _logs/

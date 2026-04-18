@@ -1,0 +1,5 @@
+ultralytics>=8.4,<9
+opencv-python-headless>=4.10,<5
+torch
+torchvision
+git+https://github.com/cvg/LightGlue.git
