@@ -25,6 +25,10 @@ def _default_task3_yoloe_weight_path() -> Path:
     return _project_root() / "data" / "weights" / "task3" / "yoloe-11m-seg.pt"
 
 
+def _default_task3_debug_dump_dir() -> Path:
+    return _project_root() / "_logs" / "debug" / "task3_rejects"
+
+
 def _default_calibration_path() -> Path:
     return _project_root() / "data" / "THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001" / "THYZ_2026_Ornek_Veri_Seti" / "Kamera_Kalibrasyon_Parametreleri_2026.txt"
 
@@ -190,6 +194,12 @@ class MvpRuntimeSettings:
     task3_superpoint_max_kpts: int = 1024
     task3_min_crop_side: int = 24
     task3_resize_crop_to: int = 256
+    task3_yoloe_match_normalization_scale: int = 50
+    task3_yoloe_min_score: float = 0.4520
+    task3_yoloe_score_confidence_weight: float = 0.30
+    task3_yoloe_score_matches_weight: float = 0.70
+    task3_debug_dump_rejects: bool = False
+    task3_debug_dump_dir: Path = field(default_factory=_default_task3_debug_dump_dir)
     profiling_gpu_query_cmd: tuple[str, ...] = (
         "nvidia-smi",
         "--query-gpu=memory.used,memory.total",

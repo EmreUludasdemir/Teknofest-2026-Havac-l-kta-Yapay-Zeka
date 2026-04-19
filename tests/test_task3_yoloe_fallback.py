@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from src.config.settings import MvpRuntimeSettings
@@ -50,9 +51,15 @@ def _pattern_image(width: int, height: int, *, embed_at: tuple[int, int] | None 
 
 
 class _ExplodingExperimentalBackend:
-    def match(self, *, decoded_frame, reference_ids):  # type: ignore[override]
-        del decoded_frame, reference_ids
+    def match(self, *, decoded_frame, reference_ids, scenario_id=None):  # type: ignore[override]
+        del decoded_frame, reference_ids, scenario_id
         raise Task3ExperimentalUnavailableError("backend_exception")
+
+
+class _CudaUnavailableExperimentalBackend:
+    def match(self, *, decoded_frame, reference_ids, scenario_id=None):  # type: ignore[override]
+        del decoded_frame, reference_ids, scenario_id
+        raise Task3ExperimentalUnavailableError("cuda_required_but_unavailable")
 
 
 class _FakeTorchNoCuda:
@@ -64,6 +71,14 @@ class _FakeTorchNoCuda:
 
 @unittest.skipUnless(is_cv2_available(), "Task3 YOLOE fallback tests require cv2")
 class Task3YoloeFallbackTests(unittest.TestCase):
+    @staticmethod
+    def _mock_find_spec_missing_lightglue(name: str):
+        from importlib.machinery import ModuleSpec
+
+        if name == "lightglue":
+            return None
+        return ModuleSpec(name, loader=None)
+
     def _frame(self) -> FrameEnvelope:
         return FrameEnvelope(
             frame_url="http://mock/frames/1/",
@@ -129,6 +144,33 @@ class Task3YoloeFallbackTests(unittest.TestCase):
             self.assertEqual(matcher.last_run_info["effective_mode"], "orb_template")
             self.assertEqual(matcher.last_run_info["fallback_reason"], "backend_exception")
 
+    def test_cuda_required_but_unavailable_falls_back_to_orb(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            temp_path = Path(tmp_dir)
+            reference_bytes = _pattern_image(64, 64)
+            frame_bytes = _pattern_image(160, 160, embed_at=(32, 40))
+            (temp_path / "ref-001.pgm").write_bytes(reference_bytes)
+
+            settings = MvpRuntimeSettings(
+                task3_reference_dir=temp_path,
+                task3_mode="yoloe_vp_lightglue",
+                task3_orb_features=512,
+                task3_match_min_inliers=2,
+                task3_match_ratio_threshold=0.9,
+                task3_yoloe_allow_cpu=False,
+            )
+            cache = ReferenceCache()
+            cache.preload_from_directory(temp_path, orb_features=settings.task3_orb_features)
+            matcher = Task3Matcher(reference_cache=cache, runtime_settings=settings)
+            matcher.experimental_backend = _CudaUnavailableExperimentalBackend()
+            decoded = decode_image_bytes(self._frame(), frame_bytes)
+
+            matches = matcher.match(self._frame(), frame_bytes, decoded_frame=decoded, mode="yoloe_vp_lightglue")
+
+            self.assertGreaterEqual(len(matches), 1)
+            self.assertEqual(matcher.last_run_info["effective_mode"], "orb_template")
+            self.assertEqual(matcher.last_run_info["fallback_reason"], "cuda_required_but_unavailable")
+
     def test_processor_surfaces_task3_info_diagnostics(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             temp_path = Path(tmp_dir)
@@ -164,13 +206,15 @@ class Task3YoloeFallbackTests(unittest.TestCase):
             )
             cache = ReferenceCache()
             cache.preload_from_directory(temp_path, orb_features=settings.task3_orb_features)
-            backend = YoloeVpLightGlueBackend(reference_cache=cache, runtime_settings=settings)
             decoded = decode_image_bytes(self._frame(), _pattern_image(160, 160, embed_at=(32, 40)))
+            matcher = Task3Matcher(reference_cache=cache, runtime_settings=settings)
 
-            with self.assertRaises(Task3ExperimentalUnavailableError) as ctx:
-                backend.match(decoded_frame=decoded, reference_ids=cache.list_ids())
+            with patch("src.task3.experimental.backend.importlib.util.find_spec", side_effect=self._mock_find_spec_missing_lightglue):
+                matches = matcher.match(self._frame(), b"", cache.list_ids(), decoded_frame=decoded, mode="yoloe_vp_lightglue")
 
-            self.assertEqual(ctx.exception.reason, "missing_lightglue")
+            self.assertGreaterEqual(len(matches), 1)
+            self.assertEqual(matcher.last_run_info["effective_mode"], "orb_template")
+            self.assertEqual(matcher.last_run_info["fallback_reason"], "missing_lightglue")
 
     def test_backend_resolve_device_requires_cuda_when_cpu_disabled(self) -> None:
         backend = YoloeVpLightGlueBackend(
@@ -179,7 +223,7 @@ class Task3YoloeFallbackTests(unittest.TestCase):
         )
         with self.assertRaises(Task3ExperimentalUnavailableError) as ctx:
             backend._resolve_device(_FakeTorchNoCuda())
-        self.assertEqual(ctx.exception.reason, "cuda_unavailable")
+        self.assertEqual(ctx.exception.reason, "cuda_required_but_unavailable")
 
 
 if __name__ == "__main__":

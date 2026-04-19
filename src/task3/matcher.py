@@ -23,6 +23,16 @@ except Exception:  # pragma: no cover - bagimli
     timm = None
     torch = None
 
+KNOWN_FALLBACK_REASONS = {
+    "missing_yoloe_weight",
+    "missing_lightglue",
+    "cuda_required_but_unavailable",
+    "backend_exception",
+    "missing_decoded_frame",
+    "missing_bgr_frame",
+    "reference_bank_not_ready",
+}
+
 
 @dataclass(slots=True)
 class LearnedDescriptorEmbedder:
@@ -108,11 +118,12 @@ class Task3Matcher:
 
         if requested_mode == "yoloe_vp_lightglue":
             try:
-                matches = self._match_with_yoloe_vp_lightglue(decoded_frame, available_ids)
+                matches = self._match_with_yoloe_vp_lightglue(decoded_frame, available_ids, scenario_id=frame.video_name)
                 self._finalize_info(matches, effective_mode="yoloe_vp_lightglue")
                 return matches
             except Exception as exc:
-                self.last_run_info["fallback_reason"] = str(exc)
+                reason = str(exc)
+                self.last_run_info["fallback_reason"] = reason if reason in KNOWN_FALLBACK_REASONS else "backend_exception"
 
         if is_cv2_available() and decoded_frame is not None and decoded_frame.gray is not None:
             if requested_mode == "learned_descriptor":
@@ -157,6 +168,8 @@ class Task3Matcher:
         self,
         decoded_frame: DecodedFrame | None,
         reference_ids: list[str],
+        *,
+        scenario_id: str | None = None,
     ) -> list[CanonicalUndefinedObject]:
         if decoded_frame is None or decoded_frame.bgr is None:
             raise RuntimeError("missing_decoded_frame")
@@ -167,7 +180,7 @@ class Task3Matcher:
                 YoloeVpLightGlueBackend,
             )
         except Exception:
-            raise RuntimeError("backend_not_implemented")
+            raise RuntimeError("backend_exception")
 
         if self.experimental_backend is None:
             self.experimental_backend = YoloeVpLightGlueBackend(
@@ -175,7 +188,11 @@ class Task3Matcher:
                 runtime_settings=self.runtime_settings,
             )
         try:
-            matches, task3_info = self.experimental_backend.match(decoded_frame=decoded_frame, reference_ids=reference_ids)
+            matches, task3_info = self.experimental_backend.match(
+                decoded_frame=decoded_frame,
+                reference_ids=reference_ids,
+                scenario_id=scenario_id,
+            )
         except Task3ExperimentalUnavailableError as exc:
             raise RuntimeError(exc.reason) from exc
         self.last_run_info.update(task3_info)

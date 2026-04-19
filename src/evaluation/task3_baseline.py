@@ -48,6 +48,15 @@ def evaluate_task3_frames(
     template_path_count = 0
     false_positive_proxy_count = 0
     match_scores: list[float] = []
+    total_candidates_generated = 0
+    total_candidates_accepted = 0
+    total_candidates_rejected = 0
+    total_candidates_rejected_by_gate = 0
+    total_candidates_rejected_by_score_filter = 0
+    yoloe_inference_ms_values: list[float] = []
+    lightglue_verify_ms_values: list[float] = []
+    effective_mode_counts: dict[str, int] = {}
+    fallback_reason_counts: dict[str, int] = {}
 
     for frame_index, decoded in enumerate(frames):
         total_frames += 1
@@ -62,13 +71,30 @@ def evaluate_task3_frames(
             metadata={"frame_index": decoded.frame_index, "image_width": decoded.width, "image_height": decoded.height},
         )
         raw_matches = matcher.match(frame, b"", reference_ids, decoded_frame=decoded, mode=mode)
+        task3_info = dict(matcher.last_run_info)
+        effective_mode = str(task3_info.get("effective_mode", mode))
+        effective_mode_counts[effective_mode] = effective_mode_counts.get(effective_mode, 0) + 1
+        fallback_reason = task3_info.get("fallback_reason")
+        if fallback_reason:
+            reason_text = str(fallback_reason)
+            fallback_reason_counts[reason_text] = fallback_reason_counts.get(reason_text, 0) + 1
+        generated_count = int(task3_info.get("candidates_generated", len(raw_matches)))
+        total_candidates_generated += generated_count
+        gate_rejected_count = int(task3_info.get("candidates_rejected_by_gate", max(generated_count - len(raw_matches), 0)))
+        total_candidates_rejected_by_gate += gate_rejected_count
+        yoloe_inference_ms_values.append(float(task3_info.get("yoloe_inference_ms", 0.0)))
+        lightglue_verify_ms_values.append(float(task3_info.get("lightglue_verify_ms_total", 0.0)))
         if raw_matches:
             raw_candidate_frames += 1
         filtered = filter_no_match_candidates(
             raw_matches,
             min_score=settings.task3_min_score,
+            mode=mode,
+            yoloe_min_score=settings.task3_yoloe_min_score,
             ambiguity_margin=settings.task3_ambiguity_margin,
         )
+        score_filter_rejected_count = max(len(raw_matches) - len(filtered), 0)
+        total_candidates_rejected_by_score_filter += score_filter_rejected_count
         if raw_matches and not filtered and len(raw_matches) > 1:
             ambiguity_suppression_count += 1
         verified = verify_matches(
@@ -78,6 +104,9 @@ def evaluate_task3_frames(
             min_inliers=settings.task3_match_min_inliers,
         )
         rejected_verification_count += max(len(filtered) - len(verified), 0)
+        final_accepted_count = len(verified)
+        total_candidates_accepted += final_accepted_count
+        total_candidates_rejected += max(generated_count - final_accepted_count, 0)
         if not verified:
             no_match_frames += 1
             continue
@@ -125,6 +154,18 @@ def evaluate_task3_frames(
         "descriptor_path_count": descriptor_path_count,
         "template_path_count": template_path_count,
         "mean_match_score": round(mean(match_scores), 6) if match_scores else 0.0,
+        "effective_mode_counts": effective_mode_counts,
+        "fallback_reason_counts": fallback_reason_counts,
+        "fallback_reason": _summarize_reason_counts(fallback_reason_counts),
+        "fallback_active": bool(fallback_reason_counts),
+        "candidates_generated": total_candidates_generated,
+        "candidates_accepted": total_candidates_accepted,
+        "candidates_rejected": total_candidates_rejected,
+        "candidates_rejected_by_gate": total_candidates_rejected_by_gate,
+        "candidates_rejected_by_score_filter": total_candidates_rejected_by_score_filter,
+        "candidate_rejected_ratio": round(total_candidates_rejected / max(total_candidates_generated, 1), 6),
+        "yoloe_inference_ms_per_frame_avg": round(_safe_mean(yoloe_inference_ms_values), 6),
+        "lightglue_verify_ms_total_per_frame_avg": round(_safe_mean(lightglue_verify_ms_values), 6),
         "decision": decision,
         "mode": mode,
     }
@@ -213,12 +254,12 @@ def write_task3_comparison(output_dir: str | Path) -> dict[str, object] | None:
 
 def render_task3_table(results: list[dict[str, object]]) -> str:
     lines = [
-        "| Video | Status | Frames | Accepted | Rejected | No-match Rate | FP Proxy | Descriptor | Template | Decision |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| Video | Status | Frames | Accepted | Rejected | No-match Rate | FP Proxy | Descriptor | Template | Fallback | Decision |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for item in results:
         lines.append(
-            "| {video} | {status} | {frames} | {accepted} | {rejected} | {no_match} | {fp} | {descriptor} | {template} | {decision} |".format(
+            "| {video} | {status} | {frames} | {accepted} | {rejected} | {no_match} | {fp} | {descriptor} | {template} | {fallback} | {decision} |".format(
                 video=item.get("video_name"),
                 status=item.get("status"),
                 frames=item.get("total_frames", 0),
@@ -228,6 +269,7 @@ def render_task3_table(results: list[dict[str, object]]) -> str:
                 fp=item.get("false_positive_proxy_count", "-"),
                 descriptor=item.get("descriptor_path_count", "-"),
                 template=item.get("template_path_count", "-"),
+                fallback=item.get("fallback_reason", "-"),
                 decision=item.get("decision", "-"),
             )
         )
@@ -282,3 +324,11 @@ def decide_learned_descriptor_gain(orb_aggregate: dict[str, object], learned_agg
 def _safe_mean(values: Iterable[float]) -> float:
     filtered = [float(value) for value in values]
     return mean(filtered) if filtered else 0.0
+
+
+def _summarize_reason_counts(counts: dict[str, int]) -> str | None:
+    if not counts:
+        return None
+    if len(counts) == 1:
+        return next(iter(counts))
+    return "mixed"

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Any
 from src.config.settings import MvpRuntimeSettings
 from src.core.frame_state import CanonicalUndefinedObject, DecodedFrame
 from src.core.vision import is_cv2_available
+from src.task3.no_match_logic import compute_mode_candidate_score, normalize_yoloe_match_count
 from src.task3.reference_cache import ReferenceCache
 
 if is_cv2_available():  # pragma: no branch - ortama bagli
@@ -22,6 +24,12 @@ class Task3ExperimentalUnavailableError(RuntimeError):
     def __init__(self, reason: str):
         super().__init__(reason)
         self.reason = reason
+
+
+FALLBACK_REASON_MISSING_WEIGHT = "missing_yoloe_weight"
+FALLBACK_REASON_MISSING_LIGHTGLUE = "missing_lightglue"
+FALLBACK_REASON_CUDA_REQUIRED = "cuda_required_but_unavailable"
+FALLBACK_REASON_BACKEND_EXCEPTION = "backend_exception"
 
 
 @dataclass(slots=True)
@@ -75,7 +83,7 @@ class YoloeReferenceBank:
 
         self.ref_names = ref_names
         self.sp_features = sp_features
-        embeddings = torch.cat(vpes, dim=0)
+        embeddings = torch.cat(vpes, dim=1)
         self.model.set_classes(self.ref_names, embeddings)
 
     def _extract_vpe(self, image: Any, prompts: dict[str, Any]) -> Any:
@@ -95,10 +103,10 @@ class YoloeReferenceBank:
         predictor.set_prompts(prompts.copy())
         predictor.setup_model(model=self.model.model)
         vpe = predictor.get_vpe(image)
-        while getattr(vpe, "dim", lambda: 0)() > 2:
-            vpe = vpe.squeeze(0)
-        if getattr(vpe, "dim", lambda: 0)() == 1:
+        if getattr(vpe, "dim", lambda: 0)() == 2:
             vpe = vpe.unsqueeze(0)
+        elif getattr(vpe, "dim", lambda: 0)() != 3:
+            raise Task3ExperimentalUnavailableError(FALLBACK_REASON_BACKEND_EXCEPTION)
         return vpe
 
 
@@ -166,6 +174,7 @@ class YoloeVpLightGlueBackend:
         *,
         decoded_frame: DecodedFrame,
         reference_ids: list[str],
+        scenario_id: str | None = None,
     ) -> tuple[list[CanonicalUndefinedObject], dict[str, Any]]:
         task3_info = {
             "requested_mode": "yoloe_vp_lightglue",
@@ -177,6 +186,7 @@ class YoloeVpLightGlueBackend:
             "candidates_generated": 0,
             "candidates_accepted": 0,
             "candidates_rejected": 0,
+            "candidates_rejected_by_gate": 0,
         }
         self._ensure_ready(reference_ids)
 
@@ -186,15 +196,20 @@ class YoloeVpLightGlueBackend:
             raise Task3ExperimentalUnavailableError("reference_bank_not_ready")
 
         start = time.perf_counter()
-        results = self.model.predict(
-            decoded_frame.bgr,
-            conf=self.runtime_settings.task3_yoloe_conf,
-            iou=self.runtime_settings.task3_yoloe_iou,
-            imgsz=self.runtime_settings.task3_yoloe_imgsz,
-            max_det=max(self.runtime_settings.task3_yoloe_max_det_per_class * max(len(reference_ids), 1), 1),
-            verbose=False,
-            device=self.device,
-        )
+        try:
+            results = self.model.predict(
+                decoded_frame.bgr,
+                conf=self.runtime_settings.task3_yoloe_conf,
+                iou=self.runtime_settings.task3_yoloe_iou,
+                imgsz=self.runtime_settings.task3_yoloe_imgsz,
+                max_det=max(self.runtime_settings.task3_yoloe_max_det_per_class * max(len(reference_ids), 1), 1),
+                verbose=False,
+                device=self.device,
+            )
+        except Task3ExperimentalUnavailableError:
+            raise
+        except Exception as exc:
+            raise Task3ExperimentalUnavailableError(FALLBACK_REASON_BACKEND_EXCEPTION) from exc
         task3_info["yoloe_inference_ms"] = round((time.perf_counter() - start) * 1000.0, 4)
         if not results:
             return [], task3_info
@@ -230,12 +245,22 @@ class YoloeVpLightGlueBackend:
         accepted: list[CanonicalUndefinedObject] = []
         rejected = 0
         verify_ms_total = 0.0
-        for index in keep_indices:
+        for candidate_idx, index in enumerate(keep_indices):
             x1 = max(int(raw_boxes[index, 0]), 0)
             y1 = max(int(raw_boxes[index, 1]), 0)
             x2 = min(int(raw_boxes[index, 2]), width - 1)
             y2 = min(int(raw_boxes[index, 3]), height - 1)
             if x2 <= x1 or y2 <= y1:
+                self._dump_rejected_candidate(
+                    scenario_id=scenario_id,
+                    frame_idx=decoded_frame.frame_index,
+                    candidate_idx=candidate_idx,
+                    object_id=self.reference_bank.ref_names[int(raw_classes[index])],
+                    match_count=0,
+                    yoloe_confidence=float(raw_confidences[index]),
+                    bbox=[x1, y1, x2, y2],
+                    crop_bgr=None,
+                )
                 rejected += 1
                 continue
 
@@ -248,13 +273,50 @@ class YoloeVpLightGlueBackend:
                 crop = decoded_frame.bgr[y1:y2, x1:x2]
                 verify_passed, match_count, verify_ms = self.verifier.verify(crop, self.reference_bank.sp_features[class_id])
                 verify_ms_total += verify_ms
+            else:
+                crop = decoded_frame.bgr[y1:y2, x1:x2]
 
             if not verify_passed:
+                self._dump_rejected_candidate(
+                    scenario_id=scenario_id,
+                    frame_idx=decoded_frame.frame_index,
+                    candidate_idx=candidate_idx,
+                    object_id=ref_name,
+                    match_count=match_count,
+                    yoloe_confidence=confidence,
+                    bbox=[x1, y1, x2, y2],
+                    crop_bgr=crop,
+                )
                 rejected += 1
                 continue
 
-            normalized_matches = 1.0 if not verify_frame else min(match_count / max(self.runtime_settings.task3_lightglue_min_matches, 1), 1.0)
-            score = (confidence * 0.70) + (normalized_matches * 0.30)
+            normalized_matches = (
+                1.0
+                if not verify_frame
+                else normalize_yoloe_match_count(
+                    match_count=match_count,
+                    normalization_scale=self.runtime_settings.task3_yoloe_match_normalization_scale,
+                )
+            )
+            score = compute_mode_candidate_score(
+                confidence=confidence,
+                normalized_matches=normalized_matches,
+                mode="yoloe_vp_lightglue",
+                yoloe_confidence_weight=self.runtime_settings.task3_yoloe_score_confidence_weight,
+                yoloe_matches_weight=self.runtime_settings.task3_yoloe_score_matches_weight,
+            )
+            self._dump_post_gate_candidate(
+                scenario_id=scenario_id,
+                frame_idx=decoded_frame.frame_index,
+                candidate_idx=candidate_idx,
+                object_id=ref_name,
+                match_count=match_count,
+                normalized_matches=normalized_matches,
+                yoloe_confidence=confidence,
+                score=score,
+                bbox=[x1, y1, x2, y2],
+                crop_bgr=crop,
+            )
             accepted.append(
                 CanonicalUndefinedObject(
                     object_id=ref_name,
@@ -269,6 +331,7 @@ class YoloeVpLightGlueBackend:
                         "task3_yoloe": {
                             "confidence": round(confidence, 4),
                             "match_count": int(match_count),
+                            "normalized_matches": round(float(normalized_matches), 4),
                             "verify_passed": bool(verify_passed),
                             "verify_skipped": bool(not verify_frame),
                         },
@@ -279,51 +342,152 @@ class YoloeVpLightGlueBackend:
         task3_info["lightglue_verify_ms_total"] = round(verify_ms_total, 4)
         task3_info["candidates_accepted"] = len(accepted)
         task3_info["candidates_rejected"] = rejected
+        task3_info["candidates_rejected_by_gate"] = rejected
         return accepted, task3_info
+
+    def _dump_rejected_candidate(
+        self,
+        *,
+        scenario_id: str | None,
+        frame_idx: int,
+        candidate_idx: int,
+        object_id: str,
+        match_count: int,
+        yoloe_confidence: float,
+        bbox: list[int],
+        crop_bgr: Any | None,
+    ) -> None:
+        if not self.runtime_settings.task3_debug_dump_rejects:
+            return
+        resolved_scenario_id = _sanitize_component(scenario_id or "unknown_scenario")
+        scenario_dir = Path(self.runtime_settings.task3_debug_dump_dir) / resolved_scenario_id
+        scenario_dir.mkdir(parents=True, exist_ok=True)
+        reject_record = {
+            "frame_idx": int(frame_idx),
+            "candidate_idx": int(candidate_idx),
+            "object_id": object_id,
+            "match_count": int(match_count),
+            "yoloe_confidence": round(float(yoloe_confidence), 6),
+            "bbox": [int(value) for value in bbox],
+            "crop_hw": [0, 0] if crop_bgr is None else [int(crop_bgr.shape[0]), int(crop_bgr.shape[1])],
+        }
+        with (scenario_dir / "rejects.jsonl").open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(reject_record, ensure_ascii=True) + "\n")
+
+        reference = self.reference_cache.get(object_id) or {}
+        reference_bgr = reference.get("bgr")
+        if reference_bgr is None and reference.get("path"):
+            reference_bgr = cv2.imread(str(reference["path"]))
+        if reference_bgr is None:
+            return
+        crop_panel = crop_bgr if crop_bgr is not None and getattr(crop_bgr, "size", 0) else np.zeros((max(reference_bgr.shape[0], 32), 32, 3), dtype=reference_bgr.dtype)
+        composite = self._build_reject_composite(reference_bgr, crop_panel, object_id=object_id, match_count=match_count)
+        filename = f"{int(frame_idx):06d}_{int(candidate_idx):02d}_{_sanitize_component(object_id)}_m{int(match_count)}.png"
+        cv2.imwrite(str(scenario_dir / filename), composite)
+
+    def _dump_post_gate_candidate(
+        self,
+        *,
+        scenario_id: str | None,
+        frame_idx: int,
+        candidate_idx: int,
+        object_id: str,
+        match_count: int,
+        normalized_matches: float,
+        yoloe_confidence: float,
+        score: float,
+        bbox: list[int],
+        crop_bgr: Any | None,
+    ) -> None:
+        if not self.runtime_settings.task3_debug_dump_rejects:
+            return
+        resolved_scenario_id = _sanitize_component(scenario_id or "unknown_scenario")
+        scenario_dir = Path(self.runtime_settings.task3_debug_dump_dir) / resolved_scenario_id
+        scenario_dir.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "frame_idx": int(frame_idx),
+            "candidate_idx": int(candidate_idx),
+            "object_id": object_id,
+            "match_count": int(match_count),
+            "normalized_matches": round(float(normalized_matches), 6),
+            "yoloe_confidence": round(float(yoloe_confidence), 6),
+            "score": round(float(score), 6),
+            "bbox": [int(value) for value in bbox],
+            "crop_hw": [0, 0] if crop_bgr is None else [int(crop_bgr.shape[0]), int(crop_bgr.shape[1])],
+        }
+        with (scenario_dir / "post_gate.jsonl").open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, ensure_ascii=True) + "\n")
+
+    def _build_reject_composite(self, reference_bgr: Any, crop_bgr: Any, *, object_id: str, match_count: int) -> Any:
+        ref_panel = _ensure_bgr(reference_bgr)
+        crop_panel = _ensure_bgr(crop_bgr)
+        target_height = max(ref_panel.shape[0], crop_panel.shape[0])
+        ref_panel = _pad_to_height(ref_panel, target_height)
+        crop_panel = _pad_to_height(crop_panel, target_height)
+        composite = cv2.hconcat([ref_panel, crop_panel])
+        overlay = f"{object_id} m={int(match_count)}"
+        cv2.putText(
+            composite,
+            overlay,
+            (8, min(28, composite.shape[0] - 8)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.75,
+            (0, 255, 0),
+            2,
+            cv2.LINE_AA,
+        )
+        return composite
 
     def _ensure_ready(self, reference_ids: list[str]) -> None:
         if not is_cv2_available():
             raise Task3ExperimentalUnavailableError("opencv_unavailable")
         weight_path = Path(self.runtime_settings.task3_yoloe_weight_path)
         if not weight_path.exists():
-            raise Task3ExperimentalUnavailableError("missing_yoloe_weight")
+            raise Task3ExperimentalUnavailableError(FALLBACK_REASON_MISSING_WEIGHT)
+        if importlib.util.find_spec("lightglue") is None:
+            raise Task3ExperimentalUnavailableError(FALLBACK_REASON_MISSING_LIGHTGLUE)
         if importlib.util.find_spec("ultralytics") is None:
             raise Task3ExperimentalUnavailableError("missing_ultralytics")
         if importlib.util.find_spec("torch") is None:
             raise Task3ExperimentalUnavailableError("missing_torch")
-        if importlib.util.find_spec("lightglue") is None:
-            raise Task3ExperimentalUnavailableError("missing_lightglue")
-
-        import torch  # type: ignore[import-not-found]
-        from lightglue import LightGlue, SuperPoint  # type: ignore[import-not-found]
-        from ultralytics import YOLOE  # type: ignore[import-not-found]
-        from ultralytics.models.yolo.yoloe import YOLOEVPSegPredictor  # type: ignore[import-not-found]
+        try:
+            import torch  # type: ignore[import-not-found]
+            from lightglue import LightGlue, SuperPoint  # type: ignore[import-not-found]
+            from ultralytics import YOLOE  # type: ignore[import-not-found]
+            from ultralytics.models.yolo.yoloe import YOLOEVPSegPredictor  # type: ignore[import-not-found]
+        except Exception as exc:
+            raise Task3ExperimentalUnavailableError(FALLBACK_REASON_BACKEND_EXCEPTION) from exc
 
         resolved_device = self._resolve_device(torch)
-        if self.model is None:
-            self.model = YOLOE(str(weight_path))
-        if self.extractor is None:
-            self.extractor = SuperPoint(max_num_keypoints=self.runtime_settings.task3_superpoint_max_kpts).eval().to(resolved_device)
-        if self.matcher is None:
-            self.matcher = LightGlue(features="superpoint").eval().to(resolved_device)
-        if self.reference_bank is None:
-            self.reference_bank = YoloeReferenceBank(
-                reference_cache=self.reference_cache,
-                model=self.model,
-                extractor=self.extractor,
-                predictor_cls=YOLOEVPSegPredictor,
-                device=resolved_device,
-                runtime_settings=self.runtime_settings,
-            )
-            self.reference_bank.build(self.reference_cache.list_ids() or reference_ids)
-        if self.verifier is None:
-            self.verifier = LightGlueCropVerifier(
-                extractor=self.extractor,
-                matcher=self.matcher,
-                device=resolved_device,
-                runtime_settings=self.runtime_settings,
-            )
-        self.device = resolved_device
+        try:
+            if self.model is None:
+                self.model = YOLOE(str(weight_path))
+            if self.extractor is None:
+                self.extractor = SuperPoint(max_num_keypoints=self.runtime_settings.task3_superpoint_max_kpts).eval().to(resolved_device)
+            if self.matcher is None:
+                self.matcher = LightGlue(features="superpoint").eval().to(resolved_device)
+            if self.reference_bank is None:
+                self.reference_bank = YoloeReferenceBank(
+                    reference_cache=self.reference_cache,
+                    model=self.model,
+                    extractor=self.extractor,
+                    predictor_cls=YOLOEVPSegPredictor,
+                    device=resolved_device,
+                    runtime_settings=self.runtime_settings,
+                )
+                self.reference_bank.build(self.reference_cache.list_ids() or reference_ids)
+            if self.verifier is None:
+                self.verifier = LightGlueCropVerifier(
+                    extractor=self.extractor,
+                    matcher=self.matcher,
+                    device=resolved_device,
+                    runtime_settings=self.runtime_settings,
+                )
+            self.device = resolved_device
+        except Task3ExperimentalUnavailableError:
+            raise
+        except Exception as exc:
+            raise Task3ExperimentalUnavailableError(FALLBACK_REASON_BACKEND_EXCEPTION) from exc
 
     def _resolve_device(self, torch_module: Any) -> str:
         configured = self.runtime_settings.task3_yoloe_device
@@ -331,10 +495,30 @@ class YoloeVpLightGlueBackend:
             if str(configured).startswith("cuda") and not bool(torch_module.cuda.is_available()):
                 if self.runtime_settings.task3_yoloe_allow_cpu:
                     return "cpu"
-                raise Task3ExperimentalUnavailableError("cuda_unavailable")
+                raise Task3ExperimentalUnavailableError(FALLBACK_REASON_CUDA_REQUIRED)
             return str(configured)
         if bool(torch_module.cuda.is_available()):
             return "cuda:0"
         if self.runtime_settings.task3_yoloe_allow_cpu:
             return "cpu"
-        raise Task3ExperimentalUnavailableError("cuda_unavailable")
+        raise Task3ExperimentalUnavailableError(FALLBACK_REASON_CUDA_REQUIRED)
+
+
+def _sanitize_component(value: str) -> str:
+    sanitized = "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in str(value))
+    return sanitized or "item"
+
+
+def _ensure_bgr(image: Any) -> Any:
+    if image is None:
+        return np.zeros((32, 32, 3), dtype=np.uint8)
+    if len(image.shape) == 2:
+        return cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    return image
+
+
+def _pad_to_height(image: Any, target_height: int) -> Any:
+    if image.shape[0] >= target_height:
+        return image
+    bottom = target_height - image.shape[0]
+    return cv2.copyMakeBorder(image, 0, bottom, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))

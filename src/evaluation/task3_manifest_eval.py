@@ -24,10 +24,17 @@ def evaluate_task3_manifest(
     manifest_path: str | Path | None = None,
     output_dir: str | Path = GENERATED_REPORTS_ROOT,
     modes: tuple[str, ...] = ("orb_template", "yoloe_vp_lightglue"),
+    scenario_ids: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     settings = runtime_settings or MvpRuntimeSettings()
     manifest = load_task3_manifest(manifest_path or settings.task3_eval_manifest_path)
     scenarios = manifest.get("scenarios", [])
+    if scenario_ids:
+        allowed = set(scenario_ids)
+        scenarios = [item for item in scenarios if item["id"] in allowed]
+        if not scenarios:
+            requested = ", ".join(sorted(allowed))
+            raise ValueError(f"Task3 manifest scenario filter matched no entries: {requested}")
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -93,8 +100,9 @@ def evaluate_task3_manifest(
         (output_path / f"task3_manifest_{suffix}_summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
         mode_payloads[mode] = payload
 
-    comparison = {"modes": mode_payloads}
-    (output_path / "task3_manifest_comparison.md").write_text(_render_comparison_markdown(mode_payloads), encoding="utf-8")
+    comparison_rows = _build_comparison_rows(mode_payloads)
+    comparison = {"modes": mode_payloads, "comparison_rows": comparison_rows}
+    (output_path / "task3_manifest_comparison.md").write_text(_render_comparison_markdown(comparison_rows), encoding="utf-8")
     (output_path / "task3_manifest_comparison.json").write_text(json.dumps(comparison, indent=2), encoding="utf-8")
     return comparison
 
@@ -120,30 +128,66 @@ def _normalize_manifest_scenario(raw: dict[str, Any], *, index: int) -> dict[str
     }
 
 
-def _render_comparison_markdown(mode_payloads: dict[str, dict[str, Any]]) -> str:
+def _build_comparison_rows(mode_payloads: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     orb_payload = mode_payloads.get("orb_template", {})
     yoloe_payload = mode_payloads.get("yoloe_vp_lightglue", {})
     orb_results = {str(item.get("scenario_id")): item for item in orb_payload.get("results", [])}
     yoloe_results = {str(item.get("scenario_id")): item for item in yoloe_payload.get("results", [])}
     scenario_ids = sorted(set(orb_results) | set(yoloe_results))
 
-    lines = [
-        "| Scenario | Reference Mode | ORB Accepted | YOLOE Accepted | ORB FP Proxy | YOLOE FP Proxy | ORB No-match | YOLOE No-match |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
-    ]
+    rows: list[dict[str, Any]] = []
     for scenario_id in scenario_ids:
         orb = orb_results.get(scenario_id, {})
         yoloe = yoloe_results.get(scenario_id, {})
+        rows.append(
+            {
+                "scenario_id": scenario_id,
+                "reference_mode": orb.get("reference_mode") or yoloe.get("reference_mode") or "-",
+                "orb_accepted": orb.get("accepted_match_count", "-"),
+                "yoloe_accepted": yoloe.get("accepted_match_count", "-"),
+                "orb_false_positive_proxy": orb.get("false_positive_proxy_count", "-"),
+                "yoloe_false_positive_proxy": yoloe.get("false_positive_proxy_count", "-"),
+                "orb_no_match_rate": orb.get("no_match_suppression_rate", "-"),
+                "yoloe_no_match_rate": yoloe.get("no_match_suppression_rate", "-"),
+                "yoloe_effective_mode": _summarize_counts(yoloe.get("effective_mode_counts", {})),
+                "yoloe_fallback_reason": yoloe.get("fallback_reason") or "-",
+                "yoloe_candidates_generated": yoloe.get("candidates_generated", "-"),
+                "yoloe_gate_rejected": yoloe.get("candidates_rejected_by_gate", "-"),
+                "yoloe_score_filter_rejected": yoloe.get("candidates_rejected_by_score_filter", "-"),
+                "yoloe_candidate_rejected_ratio": yoloe.get("candidate_rejected_ratio", "-"),
+                "yoloe_inference_ms_per_frame_avg": yoloe.get("yoloe_inference_ms_per_frame_avg", "-"),
+                "lightglue_verify_ms_total_per_frame_avg": yoloe.get("lightglue_verify_ms_total_per_frame_avg", "-"),
+                "accepted_delta_yoloe_minus_orb": _safe_delta(yoloe.get("accepted_match_count"), orb.get("accepted_match_count")),
+            }
+        )
+    return rows
+
+
+def _render_comparison_markdown(rows: list[dict[str, Any]]) -> str:
+    lines = [
+        "| Scenario | Reference Mode | ORB Accepted | YOLOE Accepted | Delta | YOLOE Effective | YOLOE Fallback | YOLOE Cand Gen | YOLOE Gate Rej | YOLOE Score Rej | YOLOE Rej Ratio | YOLOE Infer ms/frame | LG Verify ms/frame | ORB FP Proxy | YOLOE FP Proxy | ORB No-match | YOLOE No-match |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in rows:
         lines.append(
-            "| {scenario} | {reference_mode} | {orb_acc} | {yoloe_acc} | {orb_fp} | {yoloe_fp} | {orb_nm} | {yoloe_nm} |".format(
-                scenario=scenario_id,
-                reference_mode=orb.get("reference_mode") or yoloe.get("reference_mode") or "-",
-                orb_acc=orb.get("accepted_match_count", "-"),
-                yoloe_acc=yoloe.get("accepted_match_count", "-"),
-                orb_fp=orb.get("false_positive_proxy_count", "-"),
-                yoloe_fp=yoloe.get("false_positive_proxy_count", "-"),
-                orb_nm=orb.get("no_match_suppression_rate", "-"),
-                yoloe_nm=yoloe.get("no_match_suppression_rate", "-"),
+            "| {scenario} | {reference_mode} | {orb_acc} | {yoloe_acc} | {delta} | {effective} | {fallback} | {cand_gen} | {gate_rej} | {score_rej} | {rej_ratio} | {infer_ms} | {verify_ms} | {orb_fp} | {yoloe_fp} | {orb_nm} | {yoloe_nm} |".format(
+                scenario=row.get("scenario_id"),
+                reference_mode=row.get("reference_mode"),
+                orb_acc=row.get("orb_accepted"),
+                yoloe_acc=row.get("yoloe_accepted"),
+                delta=row.get("accepted_delta_yoloe_minus_orb"),
+                effective=row.get("yoloe_effective_mode"),
+                fallback=row.get("yoloe_fallback_reason"),
+                cand_gen=row.get("yoloe_candidates_generated"),
+                gate_rej=row.get("yoloe_gate_rejected"),
+                score_rej=row.get("yoloe_score_filter_rejected"),
+                rej_ratio=row.get("yoloe_candidate_rejected_ratio"),
+                infer_ms=row.get("yoloe_inference_ms_per_frame_avg"),
+                verify_ms=row.get("lightglue_verify_ms_total_per_frame_avg"),
+                orb_fp=row.get("orb_false_positive_proxy"),
+                yoloe_fp=row.get("yoloe_false_positive_proxy"),
+                orb_nm=row.get("orb_no_match_rate"),
+                yoloe_nm=row.get("yoloe_no_match_rate"),
             )
         )
     return "\n".join(lines) + "\n"
@@ -152,3 +196,18 @@ def _render_comparison_markdown(mode_payloads: dict[str, dict[str, Any]]) -> str
 def _safe_mean(values: Iterable[float]) -> float:
     filtered = [float(value) for value in values]
     return mean(filtered) if filtered else 0.0
+
+
+def _summarize_counts(counts: dict[str, Any]) -> str:
+    if not counts:
+        return "-"
+    if len(counts) == 1:
+        return next(iter(counts))
+    return ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
+
+
+def _safe_delta(left: Any, right: Any) -> str:
+    try:
+        return str(int(left) - int(right))
+    except Exception:
+        return "-"

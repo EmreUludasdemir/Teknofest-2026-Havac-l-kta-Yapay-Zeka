@@ -1,0 +1,135 @@
+from __future__ import annotations
+
+import unittest
+
+from src.config.settings import MvpRuntimeSettings
+from src.core.frame_state import CanonicalUndefinedObject
+from src.task3.no_match_logic import (
+    ORB_SCORE_CONFIDENCE_WEIGHT,
+    ORB_SCORE_MATCHES_WEIGHT,
+    compute_mode_candidate_score,
+    filter_no_match_candidates,
+    normalize_yoloe_match_count,
+)
+
+
+def _candidate(score: float) -> CanonicalUndefinedObject:
+    return CanonicalUndefinedObject(
+        object_id="ref_001",
+        top_left_x=0.0,
+        top_left_y=0.0,
+        bottom_right_x=10.0,
+        bottom_right_y=10.0,
+        metadata={"match_score": round(float(score), 6)},
+    )
+
+
+class Task3ScoringTests(unittest.TestCase):
+    def test_orb_formula_regression_guard(self) -> None:
+        score = compute_mode_candidate_score(
+            confidence=0.5,
+            normalized_matches=0.3,
+            mode="orb_template",
+            yoloe_confidence_weight=0.30,
+            yoloe_matches_weight=0.70,
+        )
+        expected = (0.5 * ORB_SCORE_CONFIDENCE_WEIGHT) + (0.3 * ORB_SCORE_MATCHES_WEIGHT)
+        self.assertAlmostEqual(score, expected, places=6)
+        self.assertAlmostEqual(score, 0.44, places=6)
+
+    def test_yoloe_formula_uses_calibrated_weights(self) -> None:
+        settings = MvpRuntimeSettings()
+        score = compute_mode_candidate_score(
+            confidence=0.5,
+            normalized_matches=0.3,
+            mode="yoloe_vp_lightglue",
+            yoloe_confidence_weight=settings.task3_yoloe_score_confidence_weight,
+            yoloe_matches_weight=settings.task3_yoloe_score_matches_weight,
+        )
+        expected = (0.5 * settings.task3_yoloe_score_confidence_weight) + (0.3 * settings.task3_yoloe_score_matches_weight)
+        self.assertAlmostEqual(score, expected, places=6)
+        self.assertAlmostEqual(score, 0.36, places=6)
+
+    def test_yoloe_normalization_retains_match_count_variance(self) -> None:
+        settings = MvpRuntimeSettings()
+        low_score = compute_mode_candidate_score(
+            confidence=0.2,
+            normalized_matches=normalize_yoloe_match_count(
+                match_count=20,
+                normalization_scale=settings.task3_yoloe_match_normalization_scale,
+            ),
+            mode="yoloe_vp_lightglue",
+            yoloe_confidence_weight=settings.task3_yoloe_score_confidence_weight,
+            yoloe_matches_weight=settings.task3_yoloe_score_matches_weight,
+        )
+        high_score = compute_mode_candidate_score(
+            confidence=0.2,
+            normalized_matches=normalize_yoloe_match_count(
+                match_count=400,
+                normalization_scale=settings.task3_yoloe_match_normalization_scale,
+            ),
+            mode="yoloe_vp_lightglue",
+            yoloe_confidence_weight=settings.task3_yoloe_score_confidence_weight,
+            yoloe_matches_weight=settings.task3_yoloe_score_matches_weight,
+        )
+
+        self.assertLess(low_score, high_score)
+        self.assertAlmostEqual(low_score, 0.34, places=6)
+        self.assertAlmostEqual(high_score, 0.76, places=6)
+
+    def test_yoloe_normalization_caps_at_one(self) -> None:
+        settings = MvpRuntimeSettings()
+        normalized = normalize_yoloe_match_count(
+            match_count=500,
+            normalization_scale=settings.task3_yoloe_match_normalization_scale,
+        )
+        self.assertLessEqual(normalized, 1.0)
+        self.assertAlmostEqual(normalized, 1.0, places=6)
+
+    def test_threshold_dispatch_uses_mode_specific_cutoff(self) -> None:
+        settings = MvpRuntimeSettings()
+        shared_score = compute_mode_candidate_score(
+            confidence=0.15,
+            normalized_matches=1.0,
+            mode="yoloe_vp_lightglue",
+            yoloe_confidence_weight=settings.task3_yoloe_score_confidence_weight,
+            yoloe_matches_weight=settings.task3_yoloe_score_matches_weight,
+        )
+        orb_score = compute_mode_candidate_score(
+            confidence=0.15,
+            normalized_matches=1.0,
+            mode="orb_template",
+            yoloe_confidence_weight=settings.task3_yoloe_score_confidence_weight,
+            yoloe_matches_weight=settings.task3_yoloe_score_matches_weight,
+        )
+
+        yoloe_filtered = filter_no_match_candidates(
+            [_candidate(shared_score)],
+            min_score=settings.task3_min_score,
+            mode="yoloe_vp_lightglue",
+            yoloe_min_score=settings.task3_yoloe_min_score,
+            ambiguity_margin=settings.task3_ambiguity_margin,
+        )
+        orb_filtered = filter_no_match_candidates(
+            [_candidate(orb_score)],
+            min_score=settings.task3_min_score,
+            mode="orb_template",
+            yoloe_min_score=settings.task3_yoloe_min_score,
+            ambiguity_margin=settings.task3_ambiguity_margin,
+        )
+
+        self.assertGreaterEqual(shared_score, settings.task3_yoloe_min_score)
+        self.assertLess(orb_score, settings.task3_min_score)
+        self.assertEqual(len(yoloe_filtered), 1)
+        self.assertEqual(orb_filtered, [])
+
+    def test_default_yoloe_scoring_constants_are_calibrated_values(self) -> None:
+        settings = MvpRuntimeSettings()
+        self.assertAlmostEqual(settings.task3_yoloe_min_score, 0.4520, places=6)
+        self.assertAlmostEqual(settings.task3_yoloe_score_confidence_weight, 0.30, places=6)
+        self.assertAlmostEqual(settings.task3_yoloe_score_matches_weight, 0.70, places=6)
+        self.assertEqual(settings.task3_yoloe_match_normalization_scale, 50)
+
+
+if __name__ == "__main__":
+    unittest.main()
