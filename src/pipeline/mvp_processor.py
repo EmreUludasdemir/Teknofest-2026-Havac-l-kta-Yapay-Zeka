@@ -117,6 +117,10 @@ class MvpFrameProcessor:
             matches = filter_no_match_candidates(
                 raw_matches,
                 min_score=self.runtime_settings.task3_min_score,
+                mode=self.runtime_settings.task3_mode,
+                yoloe_min_score=self.runtime_settings.task3_yoloe_min_score,
+                modality=decoded_frame.modality,
+                yoloe_thermal_min_score=self.runtime_settings.task3_yoloe_thermal_min_score,
                 ambiguity_margin=self.runtime_settings.task3_ambiguity_margin,
             )
             verified_matches = verify_matches(

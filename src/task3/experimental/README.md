@@ -16,8 +16,8 @@ Bu klasor `yoloe_vp_lightglue` backend'ini tutar.
 
 ## Known Limitation
 
-Frozen validation on 2026-04-19 with `task3_yoloe_min_score=0.4520`, `task3_yoloe_match_normalization_scale=50`, and YOLOE score weights `0.30/0.70` produced 6 accepted matches on `rgb_reference_session`, 0 on `thermal_cross_sensor_proxy`, 0 on `rgb_absent_target_proxy_2025`, and 3 accepted false positives on `thermal_absent_target_proxy_2025`.
+Validation on 2026-04-20 with `task3_yoloe_min_score=0.4520`, `task3_yoloe_thermal_min_score=0.3240`, `task3_yoloe_match_normalization_scale=50`, and YOLOE score weights `0.30/0.70` produced 6 accepted matches on `rgb_reference_session`, 4 on `thermal_cross_sensor_proxy`, 0 on `rgb_absent_target_proxy_2025`, and 5 accepted false positives on `thermal_absent_target_proxy_2025`.
 
-This trade-off is intentional for the experimental phase. The frozen threshold recovers RGB-present recall to the v1 target point, but thermal-present recall remains weak and thermal-absent false positives are still present. Future work: add a homography-consistency signal to the scoring formula, which is expected to separate present-target true positives from absent-target false positives without sacrificing recall.
+This trade-off is intentional for the experimental phase. The modality-aware thermal threshold improves official 2026 thermal-present recall, but thermal-absent false positives are still present. Runtime and evaluator scoring dispatch are now aligned, so online pipeline behavior matches manifest measurements. Future work: add a homography-consistency signal to the scoring formula, which is expected to separate present-target true positives from absent-target false positives without sacrificing recall.
 
-YOLOE scoring constants frozen as of 2026-04-19. No further tuning planned before TEKNOFEST 2026 On Tasarim Raporu submission (April 22, 2026). Post-competition iterations should revisit this calibration with larger probe data and a homography-consistency signal.
+Current experimental constants as of 2026-04-20: RGB threshold `0.4520`, thermal threshold `0.3240`, normalization scale `50`, score weights `0.30/0.70`. Post-competition iterations should revisit this calibration with larger probe data and a homography-consistency signal.

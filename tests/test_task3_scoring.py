@@ -108,6 +108,8 @@ class Task3ScoringTests(unittest.TestCase):
             min_score=settings.task3_min_score,
             mode="yoloe_vp_lightglue",
             yoloe_min_score=settings.task3_yoloe_min_score,
+            modality="rgb",
+            yoloe_thermal_min_score=settings.task3_yoloe_thermal_min_score,
             ambiguity_margin=settings.task3_ambiguity_margin,
         )
         orb_filtered = filter_no_match_candidates(
@@ -115,6 +117,8 @@ class Task3ScoringTests(unittest.TestCase):
             min_score=settings.task3_min_score,
             mode="orb_template",
             yoloe_min_score=settings.task3_yoloe_min_score,
+            modality="rgb",
+            yoloe_thermal_min_score=settings.task3_yoloe_thermal_min_score,
             ambiguity_margin=settings.task3_ambiguity_margin,
         )
 
@@ -123,9 +127,38 @@ class Task3ScoringTests(unittest.TestCase):
         self.assertEqual(len(yoloe_filtered), 1)
         self.assertEqual(orb_filtered, [])
 
+    def test_thermal_modality_uses_lower_yoloe_cutoff(self) -> None:
+        settings = MvpRuntimeSettings()
+        borderline_score = 0.35
+
+        thermal_filtered = filter_no_match_candidates(
+            [_candidate(borderline_score)],
+            min_score=settings.task3_min_score,
+            mode="yoloe_vp_lightglue",
+            yoloe_min_score=settings.task3_yoloe_min_score,
+            modality="thermal",
+            yoloe_thermal_min_score=settings.task3_yoloe_thermal_min_score,
+            ambiguity_margin=settings.task3_ambiguity_margin,
+        )
+        rgb_filtered = filter_no_match_candidates(
+            [_candidate(borderline_score)],
+            min_score=settings.task3_min_score,
+            mode="yoloe_vp_lightglue",
+            yoloe_min_score=settings.task3_yoloe_min_score,
+            modality="rgb",
+            yoloe_thermal_min_score=settings.task3_yoloe_thermal_min_score,
+            ambiguity_margin=settings.task3_ambiguity_margin,
+        )
+
+        self.assertLess(borderline_score, settings.task3_yoloe_min_score)
+        self.assertGreaterEqual(borderline_score, settings.task3_yoloe_thermal_min_score)
+        self.assertEqual(len(thermal_filtered), 1)
+        self.assertEqual(rgb_filtered, [])
+
     def test_default_yoloe_scoring_constants_are_calibrated_values(self) -> None:
         settings = MvpRuntimeSettings()
         self.assertAlmostEqual(settings.task3_yoloe_min_score, 0.4520, places=6)
+        self.assertAlmostEqual(settings.task3_yoloe_thermal_min_score, 0.3240, places=6)
         self.assertAlmostEqual(settings.task3_yoloe_score_confidence_weight, 0.30, places=6)
         self.assertAlmostEqual(settings.task3_yoloe_score_matches_weight, 0.70, places=6)
         self.assertEqual(settings.task3_yoloe_match_normalization_scale, 50)

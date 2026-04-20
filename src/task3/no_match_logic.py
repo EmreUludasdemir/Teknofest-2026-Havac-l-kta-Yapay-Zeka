@@ -35,7 +35,11 @@ def resolve_min_score_for_mode(
     mode: str,
     min_score: float,
     yoloe_min_score: float | None = None,
+    modality: str | None = None,
+    yoloe_thermal_min_score: float | None = None,
 ) -> float:
+    if mode == "yoloe_vp_lightglue" and modality == "thermal" and yoloe_thermal_min_score is not None:
+        return float(yoloe_thermal_min_score)
     if mode == "yoloe_vp_lightglue" and yoloe_min_score is not None:
         return float(yoloe_min_score)
     return float(min_score)
@@ -47,12 +51,20 @@ def filter_no_match_candidates(
     min_score: float = 0.70,
     mode: str = "orb_template",
     yoloe_min_score: float | None = None,
+    modality: str | None = None,
+    yoloe_thermal_min_score: float | None = None,
     ambiguity_margin: float = 0.05,
 ) -> list[CanonicalUndefinedObject]:
     """Belirsiz durumda kutu basmaz; tek guvenilir adayi birakir."""
 
     scored = sorted(matches, key=lambda item: float(item.metadata.get("match_score", 0.0)), reverse=True)
-    resolved_min_score = resolve_min_score_for_mode(mode=mode, min_score=min_score, yoloe_min_score=yoloe_min_score)
+    resolved_min_score = resolve_min_score_for_mode(
+        mode=mode,
+        min_score=min_score,
+        yoloe_min_score=yoloe_min_score,
+        modality=modality,
+        yoloe_thermal_min_score=yoloe_thermal_min_score,
+    )
     filtered = [item for item in scored if float(item.metadata.get("match_score", 0.0)) >= resolved_min_score]
     if not filtered:
         return []

@@ -91,6 +91,8 @@ def evaluate_task3_frames(
             min_score=settings.task3_min_score,
             mode=mode,
             yoloe_min_score=settings.task3_yoloe_min_score,
+            modality=decoded.modality,
+            yoloe_thermal_min_score=settings.task3_yoloe_thermal_min_score,
             ambiguity_margin=settings.task3_ambiguity_margin,
         )
         score_filter_rejected_count = max(len(raw_matches) - len(filtered), 0)
