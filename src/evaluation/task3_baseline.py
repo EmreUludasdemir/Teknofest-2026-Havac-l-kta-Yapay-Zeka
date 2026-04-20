@@ -55,6 +55,7 @@ def evaluate_task3_frames(
     total_candidates_rejected_by_score_filter = 0
     yoloe_inference_ms_values: list[float] = []
     lightglue_verify_ms_values: list[float] = []
+    homography_compute_ms_values: list[float] = []
     effective_mode_counts: dict[str, int] = {}
     fallback_reason_counts: dict[str, int] = {}
 
@@ -84,6 +85,7 @@ def evaluate_task3_frames(
         total_candidates_rejected_by_gate += gate_rejected_count
         yoloe_inference_ms_values.append(float(task3_info.get("yoloe_inference_ms", 0.0)))
         lightglue_verify_ms_values.append(float(task3_info.get("lightglue_verify_ms_total", 0.0)))
+        homography_compute_ms_values.append(float(task3_info.get("homography_compute_ms_total", 0.0)))
         if raw_matches:
             raw_candidate_frames += 1
         filtered = filter_no_match_candidates(
@@ -168,6 +170,7 @@ def evaluate_task3_frames(
         "candidate_rejected_ratio": round(total_candidates_rejected / max(total_candidates_generated, 1), 6),
         "yoloe_inference_ms_per_frame_avg": round(_safe_mean(yoloe_inference_ms_values), 6),
         "lightglue_verify_ms_total_per_frame_avg": round(_safe_mean(lightglue_verify_ms_values), 6),
+        "homography_compute_ms_per_frame_avg": round(_safe_mean(homography_compute_ms_values), 6),
         "decision": decision,
         "mode": mode,
     }

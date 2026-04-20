@@ -29,26 +29,37 @@ class Task3ScoringTests(unittest.TestCase):
         score = compute_mode_candidate_score(
             confidence=0.5,
             normalized_matches=0.3,
+            inlier_ratio=0.4,
             mode="orb_template",
-            yoloe_confidence_weight=0.30,
-            yoloe_matches_weight=0.70,
+            yoloe_confidence_weight=0.20,
+            yoloe_matches_weight=0.55,
+            yoloe_inlier_weight=0.25,
         )
         expected = (0.5 * ORB_SCORE_CONFIDENCE_WEIGHT) + (0.3 * ORB_SCORE_MATCHES_WEIGHT)
         self.assertAlmostEqual(score, expected, places=6)
         self.assertAlmostEqual(score, 0.44, places=6)
 
-    def test_yoloe_formula_uses_calibrated_weights(self) -> None:
+    def test_yoloe_formula_uses_three_term_weights(self) -> None:
         settings = MvpRuntimeSettings()
         score = compute_mode_candidate_score(
-            confidence=0.5,
-            normalized_matches=0.3,
+            confidence=0.15,
+            normalized_matches=normalize_yoloe_match_count(
+                match_count=20,
+                normalization_scale=settings.task3_yoloe_match_normalization_scale,
+            ),
+            inlier_ratio=0.4,
             mode="yoloe_vp_lightglue",
             yoloe_confidence_weight=settings.task3_yoloe_score_confidence_weight,
             yoloe_matches_weight=settings.task3_yoloe_score_matches_weight,
+            yoloe_inlier_weight=settings.task3_yoloe_score_inlier_weight,
         )
-        expected = (0.5 * settings.task3_yoloe_score_confidence_weight) + (0.3 * settings.task3_yoloe_score_matches_weight)
+        expected = (
+            (0.15 * settings.task3_yoloe_score_confidence_weight)
+            + (0.4 * settings.task3_yoloe_score_matches_weight)
+            + (0.4 * settings.task3_yoloe_score_inlier_weight)
+        )
         self.assertAlmostEqual(score, expected, places=6)
-        self.assertAlmostEqual(score, 0.36, places=6)
+        self.assertAlmostEqual(score, 0.3375, places=6)
 
     def test_yoloe_normalization_retains_match_count_variance(self) -> None:
         settings = MvpRuntimeSettings()
@@ -58,9 +69,11 @@ class Task3ScoringTests(unittest.TestCase):
                 match_count=20,
                 normalization_scale=settings.task3_yoloe_match_normalization_scale,
             ),
+            inlier_ratio=0.3,
             mode="yoloe_vp_lightglue",
             yoloe_confidence_weight=settings.task3_yoloe_score_confidence_weight,
             yoloe_matches_weight=settings.task3_yoloe_score_matches_weight,
+            yoloe_inlier_weight=settings.task3_yoloe_score_inlier_weight,
         )
         high_score = compute_mode_candidate_score(
             confidence=0.2,
@@ -68,14 +81,16 @@ class Task3ScoringTests(unittest.TestCase):
                 match_count=400,
                 normalization_scale=settings.task3_yoloe_match_normalization_scale,
             ),
+            inlier_ratio=0.3,
             mode="yoloe_vp_lightglue",
             yoloe_confidence_weight=settings.task3_yoloe_score_confidence_weight,
             yoloe_matches_weight=settings.task3_yoloe_score_matches_weight,
+            yoloe_inlier_weight=settings.task3_yoloe_score_inlier_weight,
         )
 
         self.assertLess(low_score, high_score)
-        self.assertAlmostEqual(low_score, 0.34, places=6)
-        self.assertAlmostEqual(high_score, 0.76, places=6)
+        self.assertAlmostEqual(low_score, 0.336, places=6)
+        self.assertAlmostEqual(high_score, 0.702, places=6)
 
     def test_yoloe_normalization_caps_at_one(self) -> None:
         settings = MvpRuntimeSettings()
@@ -91,16 +106,20 @@ class Task3ScoringTests(unittest.TestCase):
         shared_score = compute_mode_candidate_score(
             confidence=0.15,
             normalized_matches=1.0,
+            inlier_ratio=0.4,
             mode="yoloe_vp_lightglue",
             yoloe_confidence_weight=settings.task3_yoloe_score_confidence_weight,
             yoloe_matches_weight=settings.task3_yoloe_score_matches_weight,
+            yoloe_inlier_weight=settings.task3_yoloe_score_inlier_weight,
         )
         orb_score = compute_mode_candidate_score(
             confidence=0.15,
             normalized_matches=1.0,
+            inlier_ratio=0.4,
             mode="orb_template",
             yoloe_confidence_weight=settings.task3_yoloe_score_confidence_weight,
             yoloe_matches_weight=settings.task3_yoloe_score_matches_weight,
+            yoloe_inlier_weight=settings.task3_yoloe_score_inlier_weight,
         )
 
         yoloe_filtered = filter_no_match_candidates(
@@ -155,13 +174,49 @@ class Task3ScoringTests(unittest.TestCase):
         self.assertEqual(len(thermal_filtered), 1)
         self.assertEqual(rgb_filtered, [])
 
+    def test_yoloe_inlier_ratio_monotonicity(self) -> None:
+        settings = MvpRuntimeSettings()
+        low_inlier_score = compute_mode_candidate_score(
+            confidence=0.15,
+            normalized_matches=0.4,
+            inlier_ratio=0.1,
+            mode="yoloe_vp_lightglue",
+            yoloe_confidence_weight=settings.task3_yoloe_score_confidence_weight,
+            yoloe_matches_weight=settings.task3_yoloe_score_matches_weight,
+            yoloe_inlier_weight=settings.task3_yoloe_score_inlier_weight,
+        )
+        high_inlier_score = compute_mode_candidate_score(
+            confidence=0.15,
+            normalized_matches=0.4,
+            inlier_ratio=0.5,
+            mode="yoloe_vp_lightglue",
+            yoloe_confidence_weight=settings.task3_yoloe_score_confidence_weight,
+            yoloe_matches_weight=settings.task3_yoloe_score_matches_weight,
+            yoloe_inlier_weight=settings.task3_yoloe_score_inlier_weight,
+        )
+
+        self.assertGreater(high_inlier_score, low_inlier_score)
+        self.assertAlmostEqual(low_inlier_score, 0.2955, places=6)
+        self.assertAlmostEqual(high_inlier_score, 0.3515, places=6)
+
+    def test_settings_sanity_keeps_yoloe_weight_sum_at_one(self) -> None:
+        settings = MvpRuntimeSettings()
+        weight_sum = (
+            settings.task3_yoloe_score_confidence_weight
+            + settings.task3_yoloe_score_matches_weight
+            + settings.task3_yoloe_score_inlier_weight
+        )
+        self.assertAlmostEqual(weight_sum, 1.0, places=9)
+
     def test_default_yoloe_scoring_constants_are_calibrated_values(self) -> None:
         settings = MvpRuntimeSettings()
         self.assertAlmostEqual(settings.task3_yoloe_min_score, 0.4520, places=6)
         self.assertAlmostEqual(settings.task3_yoloe_thermal_min_score, 0.3240, places=6)
-        self.assertAlmostEqual(settings.task3_yoloe_score_confidence_weight, 0.30, places=6)
-        self.assertAlmostEqual(settings.task3_yoloe_score_matches_weight, 0.70, places=6)
+        self.assertAlmostEqual(settings.task3_yoloe_score_confidence_weight, 0.25, places=6)
+        self.assertAlmostEqual(settings.task3_yoloe_score_matches_weight, 0.61, places=6)
+        self.assertAlmostEqual(settings.task3_yoloe_score_inlier_weight, 0.14, places=6)
         self.assertEqual(settings.task3_yoloe_match_normalization_scale, 50)
+        self.assertAlmostEqual(settings.task3_yoloe_homography_ransac_reproj_threshold, 5.0, places=6)
 
 
 if __name__ == "__main__":

@@ -137,12 +137,12 @@ class LightGlueCropVerifier:
             tensor = tensor[None]
         return tensor
 
-    def verify(self, crop_bgr: Any, ref_features: dict[str, Any]) -> tuple[bool, int, float]:
+    def verify(self, crop_bgr: Any, ref_features: dict[str, Any]) -> tuple[bool, int, float, dict[str, Any] | None]:
         from lightglue.utils import rbd
 
         crop_tensor = self._prepare_crop(crop_bgr)
         if crop_tensor is None:
-            return False, 0, 0.0
+            return False, 0, 0.0, None
 
         start = time.perf_counter()
         try:
@@ -152,10 +152,26 @@ class LightGlueCropVerifier:
             matches = result.get("matches")
             match_count = int(matches.shape[0]) if matches is not None else 0
         except Exception:
-            return False, 0, 0.0
+            return False, 0, 0.0, None
         elapsed_ms = (time.perf_counter() - start) * 1000.0
         passed = match_count >= self.runtime_settings.task3_lightglue_min_matches
-        return passed, match_count, elapsed_ms
+
+        kpts_data: dict[str, Any] | None = None
+        if match_count > 0 and matches is not None:
+            try:
+                kpts0 = ref_features.get("keypoints")
+                kpts1 = crop_features.get("keypoints")
+                if kpts0 is not None and kpts1 is not None:
+                    # features may retain batch dim [1,N,2]; squeeze to [N,2]
+                    k0 = kpts0.squeeze(0) if kpts0.dim() == 3 else kpts0
+                    k1 = kpts1.squeeze(0) if kpts1.dim() == 3 else kpts1
+                    m_kpts0 = k0[matches[:, 0]].detach().cpu().numpy()
+                    m_kpts1 = k1[matches[:, 1]].detach().cpu().numpy()
+                    kpts_data = {"m_kpts0": m_kpts0, "m_kpts1": m_kpts1, "match_count": match_count}
+            except Exception:
+                kpts_data = None
+
+        return passed, match_count, elapsed_ms, kpts_data
 
 
 @dataclass(slots=True)
@@ -183,6 +199,7 @@ class YoloeVpLightGlueBackend:
             "references_loaded": len(reference_ids),
             "yoloe_inference_ms": 0.0,
             "lightglue_verify_ms_total": 0.0,
+            "homography_compute_ms_total": 0.0,
             "candidates_generated": 0,
             "candidates_accepted": 0,
             "candidates_rejected": 0,
@@ -245,6 +262,7 @@ class YoloeVpLightGlueBackend:
         accepted: list[CanonicalUndefinedObject] = []
         rejected = 0
         verify_ms_total = 0.0
+        homography_ms_total = 0.0
         for candidate_idx, index in enumerate(keep_indices):
             x1 = max(int(raw_boxes[index, 0]), 0)
             y1 = max(int(raw_boxes[index, 1]), 0)
@@ -269,12 +287,19 @@ class YoloeVpLightGlueBackend:
             confidence = float(raw_confidences[index])
             match_count = 0
             verify_passed = True
+            kpts_data: dict[str, Any] | None = None
             if verify_frame:
                 crop = decoded_frame.bgr[y1:y2, x1:x2]
-                verify_passed, match_count, verify_ms = self.verifier.verify(crop, self.reference_bank.sp_features[class_id])
+                verify_passed, match_count, verify_ms, kpts_data = self.verifier.verify(crop, self.reference_bank.sp_features[class_id])
                 verify_ms_total += verify_ms
             else:
                 crop = decoded_frame.bgr[y1:y2, x1:x2]
+
+            inlier_count, inlier_ratio, homography_found, homography_compute_ms = _compute_homography_consistency(
+                kpts_data,
+                reproj_threshold=self.runtime_settings.task3_yoloe_homography_ransac_reproj_threshold,
+            )
+            homography_ms_total += homography_compute_ms
 
             if not verify_passed:
                 self._dump_rejected_candidate(
@@ -301,9 +326,11 @@ class YoloeVpLightGlueBackend:
             score = compute_mode_candidate_score(
                 confidence=confidence,
                 normalized_matches=normalized_matches,
+                inlier_ratio=inlier_ratio,
                 mode="yoloe_vp_lightglue",
                 yoloe_confidence_weight=self.runtime_settings.task3_yoloe_score_confidence_weight,
                 yoloe_matches_weight=self.runtime_settings.task3_yoloe_score_matches_weight,
+                yoloe_inlier_weight=self.runtime_settings.task3_yoloe_score_inlier_weight,
             )
             self._dump_post_gate_candidate(
                 scenario_id=scenario_id,
@@ -316,6 +343,11 @@ class YoloeVpLightGlueBackend:
                 score=score,
                 bbox=[x1, y1, x2, y2],
                 crop_bgr=crop,
+                inlier_count=inlier_count,
+                inlier_ratio=inlier_ratio,
+                homography_found=homography_found,
+                homography_compute_ms=homography_compute_ms,
+                kpts_data=kpts_data,
             )
             accepted.append(
                 CanonicalUndefinedObject(
@@ -334,12 +366,16 @@ class YoloeVpLightGlueBackend:
                             "normalized_matches": round(float(normalized_matches), 4),
                             "verify_passed": bool(verify_passed),
                             "verify_skipped": bool(not verify_frame),
+                            "inlier_count": int(inlier_count),
+                            "inlier_ratio": round(float(inlier_ratio), 4),
+                            "homography_found": bool(homography_found),
                         },
                     },
                 )
             )
 
         task3_info["lightglue_verify_ms_total"] = round(verify_ms_total, 4)
+        task3_info["homography_compute_ms_total"] = round(homography_ms_total, 4)
         task3_info["candidates_accepted"] = len(accepted)
         task3_info["candidates_rejected"] = rejected
         task3_info["candidates_rejected_by_gate"] = rejected
@@ -398,13 +434,18 @@ class YoloeVpLightGlueBackend:
         score: float,
         bbox: list[int],
         crop_bgr: Any | None,
+        inlier_count: int,
+        inlier_ratio: float,
+        homography_found: bool,
+        homography_compute_ms: float,
+        kpts_data: dict[str, Any] | None = None,
     ) -> None:
         if not self.runtime_settings.task3_debug_dump_rejects:
             return
         resolved_scenario_id = _sanitize_component(scenario_id or "unknown_scenario")
         scenario_dir = Path(self.runtime_settings.task3_debug_dump_dir) / resolved_scenario_id
         scenario_dir.mkdir(parents=True, exist_ok=True)
-        payload = {
+        payload: dict[str, Any] = {
             "frame_idx": int(frame_idx),
             "candidate_idx": int(candidate_idx),
             "object_id": object_id,
@@ -412,9 +453,19 @@ class YoloeVpLightGlueBackend:
             "normalized_matches": round(float(normalized_matches), 6),
             "yoloe_confidence": round(float(yoloe_confidence), 6),
             "score": round(float(score), 6),
+            "inlier_count": int(inlier_count),
+            "inlier_ratio": round(float(inlier_ratio), 6),
+            "homography_found": bool(homography_found),
+            "homography_compute_ms": round(float(homography_compute_ms), 6),
             "bbox": [int(value) for value in bbox],
             "crop_hw": [0, 0] if crop_bgr is None else [int(crop_bgr.shape[0]), int(crop_bgr.shape[1])],
         }
+        if self.runtime_settings.task3_debug_export_keypoints and kpts_data is not None:
+            m0 = kpts_data.get("m_kpts0")
+            m1 = kpts_data.get("m_kpts1")
+            if m0 is not None and m1 is not None:
+                payload["m_kpts0"] = m0.tolist()
+                payload["m_kpts1"] = m1.tolist()
         with (scenario_dir / "post_gate.jsonl").open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(payload, ensure_ascii=True) + "\n")
 
@@ -502,6 +553,36 @@ class YoloeVpLightGlueBackend:
         if self.runtime_settings.task3_yoloe_allow_cpu:
             return "cpu"
         raise Task3ExperimentalUnavailableError(FALLBACK_REASON_CUDA_REQUIRED)
+
+
+def _compute_homography_consistency(
+    kpts_data: dict[str, Any] | None,
+    *,
+    reproj_threshold: float = 5.0,
+) -> tuple[int, float, bool, float]:
+    start = time.perf_counter()
+    if kpts_data is None:
+        return 0, 0.0, False, 0.0
+    m_kpts0 = kpts_data.get("m_kpts0")
+    m_kpts1 = kpts_data.get("m_kpts1")
+    if isinstance(m_kpts0, list):
+        import numpy as _np
+        m_kpts0 = _np.array(m_kpts0, dtype="float32")
+        m_kpts1 = _np.array(m_kpts1, dtype="float32")
+    total = int(kpts_data.get("match_count", 0)) or (len(m_kpts0) if m_kpts0 is not None else 0)
+    if m_kpts0 is None or m_kpts1 is None or total < 4:
+        return 0, 0.0, False, round((time.perf_counter() - start) * 1000.0, 6)
+    try:
+        src_pts = m_kpts0.reshape(-1, 1, 2).astype("float32")
+        dst_pts = m_kpts1.reshape(-1, 1, 2).astype("float32")
+        homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, reproj_threshold)
+        inlier_count = int(mask.ravel().sum()) if mask is not None else 0
+        inlier_ratio = inlier_count / max(total, 1)
+        elapsed_ms = round((time.perf_counter() - start) * 1000.0, 6)
+        return inlier_count, inlier_ratio, homography is not None and mask is not None, elapsed_ms
+    except Exception:
+        elapsed_ms = round((time.perf_counter() - start) * 1000.0, 6)
+        return 0, 0.0, False, elapsed_ms
 
 
 def _sanitize_component(value: str) -> str:

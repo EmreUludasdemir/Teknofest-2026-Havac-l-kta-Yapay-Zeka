@@ -21,6 +21,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run-tag", default=None)
     parser.add_argument("--scenario-id", action="append", default=None)
     parser.add_argument("--debug-dump-rejects", action="store_true")
+    parser.add_argument("--export-keypoints", action="store_true")
     parser.add_argument("--allow-cpu-yoloe", action="store_true")
     args = parser.parse_args(argv)
 
@@ -29,6 +30,8 @@ def main(argv: list[str] | None = None) -> int:
         settings = replace(settings, task3_yoloe_allow_cpu=True)
     if args.debug_dump_rejects:
         settings = replace(settings, task3_debug_dump_rejects=True)
+    if args.export_keypoints:
+        settings = replace(settings, task3_debug_dump_rejects=True, task3_debug_export_keypoints=True)
     resolved_output_dir = Path(args.output_dir)
     if args.run_tag:
         resolved_output_dir = resolved_output_dir / f"{date.today().isoformat()}_{args.run_tag}"

@@ -152,9 +152,11 @@ class Task3Matcher:
             "references_loaded": references_loaded,
             "yoloe_inference_ms": 0.0,
             "lightglue_verify_ms_total": 0.0,
+            "homography_compute_ms_total": 0.0,
             "candidates_generated": 0,
             "candidates_accepted": 0,
             "candidates_rejected": 0,
+            "candidates_rejected_by_gate": 0,
         }
 
     def _finalize_info(self, matches: list[CanonicalUndefinedObject], *, effective_mode: str) -> None:

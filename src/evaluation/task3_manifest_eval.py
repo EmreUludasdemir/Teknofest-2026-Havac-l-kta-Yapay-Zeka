@@ -157,6 +157,7 @@ def _build_comparison_rows(mode_payloads: dict[str, dict[str, Any]]) -> list[dic
                 "yoloe_candidate_rejected_ratio": yoloe.get("candidate_rejected_ratio", "-"),
                 "yoloe_inference_ms_per_frame_avg": yoloe.get("yoloe_inference_ms_per_frame_avg", "-"),
                 "lightglue_verify_ms_total_per_frame_avg": yoloe.get("lightglue_verify_ms_total_per_frame_avg", "-"),
+                "homography_compute_ms_per_frame_avg": yoloe.get("homography_compute_ms_per_frame_avg", "-"),
                 "accepted_delta_yoloe_minus_orb": _safe_delta(yoloe.get("accepted_match_count"), orb.get("accepted_match_count")),
             }
         )
@@ -165,12 +166,12 @@ def _build_comparison_rows(mode_payloads: dict[str, dict[str, Any]]) -> list[dic
 
 def _render_comparison_markdown(rows: list[dict[str, Any]]) -> str:
     lines = [
-        "| Scenario | Reference Mode | ORB Accepted | YOLOE Accepted | Delta | YOLOE Effective | YOLOE Fallback | YOLOE Cand Gen | YOLOE Gate Rej | YOLOE Score Rej | YOLOE Rej Ratio | YOLOE Infer ms/frame | LG Verify ms/frame | ORB FP Proxy | YOLOE FP Proxy | ORB No-match | YOLOE No-match |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| Scenario | Reference Mode | ORB Accepted | YOLOE Accepted | Delta | YOLOE Effective | YOLOE Fallback | YOLOE Cand Gen | YOLOE Gate Rej | YOLOE Score Rej | YOLOE Rej Ratio | YOLOE Infer ms/frame | LG Verify ms/frame | Homography ms/frame | ORB FP Proxy | YOLOE FP Proxy | ORB No-match | YOLOE No-match |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in rows:
         lines.append(
-            "| {scenario} | {reference_mode} | {orb_acc} | {yoloe_acc} | {delta} | {effective} | {fallback} | {cand_gen} | {gate_rej} | {score_rej} | {rej_ratio} | {infer_ms} | {verify_ms} | {orb_fp} | {yoloe_fp} | {orb_nm} | {yoloe_nm} |".format(
+            "| {scenario} | {reference_mode} | {orb_acc} | {yoloe_acc} | {delta} | {effective} | {fallback} | {cand_gen} | {gate_rej} | {score_rej} | {rej_ratio} | {infer_ms} | {verify_ms} | {homography_ms} | {orb_fp} | {yoloe_fp} | {orb_nm} | {yoloe_nm} |".format(
                 scenario=row.get("scenario_id"),
                 reference_mode=row.get("reference_mode"),
                 orb_acc=row.get("orb_accepted"),
@@ -184,6 +185,7 @@ def _render_comparison_markdown(rows: list[dict[str, Any]]) -> str:
                 rej_ratio=row.get("yoloe_candidate_rejected_ratio"),
                 infer_ms=row.get("yoloe_inference_ms_per_frame_avg"),
                 verify_ms=row.get("lightglue_verify_ms_total_per_frame_avg"),
+                homography_ms=row.get("homography_compute_ms_per_frame_avg"),
                 orb_fp=row.get("orb_false_positive_proxy"),
                 yoloe_fp=row.get("yoloe_false_positive_proxy"),
                 orb_nm=row.get("orb_no_match_rate"),

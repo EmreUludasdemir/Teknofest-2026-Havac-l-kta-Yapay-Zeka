@@ -10,12 +10,18 @@ def compute_mode_candidate_score(
     *,
     confidence: float,
     normalized_matches: float,
+    inlier_ratio: float = 0.0,
     mode: str,
     yoloe_confidence_weight: float,
     yoloe_matches_weight: float,
+    yoloe_inlier_weight: float = 0.0,
 ) -> float:
     if mode == "yoloe_vp_lightglue":
-        return (float(confidence) * float(yoloe_confidence_weight)) + (float(normalized_matches) * float(yoloe_matches_weight))
+        return (
+            (float(confidence) * float(yoloe_confidence_weight))
+            + (float(normalized_matches) * float(yoloe_matches_weight))
+            + (float(inlier_ratio) * float(yoloe_inlier_weight))
+        )
     return (float(confidence) * ORB_SCORE_CONFIDENCE_WEIGHT) + (float(normalized_matches) * ORB_SCORE_MATCHES_WEIGHT)
 
 

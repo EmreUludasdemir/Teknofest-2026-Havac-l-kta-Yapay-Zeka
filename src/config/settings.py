@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import math
 from pathlib import Path
 from typing import Any
 
@@ -197,15 +198,30 @@ class MvpRuntimeSettings:
     task3_yoloe_match_normalization_scale: int = 50
     task3_yoloe_min_score: float = 0.4520
     task3_yoloe_thermal_min_score: float = 0.3240
-    task3_yoloe_score_confidence_weight: float = 0.30
-    task3_yoloe_score_matches_weight: float = 0.70
+    task3_yoloe_score_confidence_weight: float = 0.25
+    task3_yoloe_score_matches_weight: float = 0.61
+    task3_yoloe_score_inlier_weight: float = 0.14
+    task3_yoloe_homography_ransac_reproj_threshold: float = 5.0
     task3_debug_dump_rejects: bool = False
     task3_debug_dump_dir: Path = field(default_factory=_default_task3_debug_dump_dir)
+    task3_debug_export_keypoints: bool = False
     profiling_gpu_query_cmd: tuple[str, ...] = (
         "nvidia-smi",
         "--query-gpu=memory.used,memory.total",
         "--format=csv,noheader,nounits",
     )
+
+    def __post_init__(self) -> None:
+        yoloe_weight_sum = (
+            float(self.task3_yoloe_score_confidence_weight)
+            + float(self.task3_yoloe_score_matches_weight)
+            + float(self.task3_yoloe_score_inlier_weight)
+        )
+        if not math.isclose(yoloe_weight_sum, 1.0, rel_tol=0.0, abs_tol=1e-9):
+            raise ValueError(
+                "task3_yoloe_score_confidence_weight + task3_yoloe_score_matches_weight + "
+                f"task3_yoloe_score_inlier_weight must equal 1.0, got {yoloe_weight_sum:.12f}"
+            )
 
     def resolve_task1_model_path(self, candidate_name: str | None = None) -> Path | None:
         if candidate_name and candidate_name in self.task1_candidate_paths:
