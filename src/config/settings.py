@@ -197,7 +197,7 @@ class MvpRuntimeSettings:
     task3_resize_crop_to: int = 256
     task3_yoloe_match_normalization_scale: int = 50
     task3_yoloe_min_score: float = 0.4520
-    task3_yoloe_thermal_min_score: float = 0.3240
+    task3_yoloe_thermal_min_score: float = 0.50
     task3_yoloe_score_confidence_weight: float = 0.25
     task3_yoloe_score_matches_weight: float = 0.61
     task3_yoloe_score_inlier_weight: float = 0.14

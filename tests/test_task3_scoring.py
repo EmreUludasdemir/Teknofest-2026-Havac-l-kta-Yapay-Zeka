@@ -146,9 +146,11 @@ class Task3ScoringTests(unittest.TestCase):
         self.assertEqual(len(yoloe_filtered), 1)
         self.assertEqual(orb_filtered, [])
 
-    def test_thermal_modality_uses_lower_yoloe_cutoff(self) -> None:
+    def test_thermal_modality_uses_higher_yoloe_cutoff(self) -> None:
+        # 2026-04-21: thermal threshold raised to 0.50 > RGB threshold 0.4520.
+        # Thermal is now more restrictive: a score that passes RGB is rejected by thermal.
         settings = MvpRuntimeSettings()
-        borderline_score = 0.35
+        borderline_score = 0.47  # passes RGB (>=0.4520) but fails thermal (<0.50)
 
         thermal_filtered = filter_no_match_candidates(
             [_candidate(borderline_score)],
@@ -169,10 +171,10 @@ class Task3ScoringTests(unittest.TestCase):
             ambiguity_margin=settings.task3_ambiguity_margin,
         )
 
-        self.assertLess(borderline_score, settings.task3_yoloe_min_score)
-        self.assertGreaterEqual(borderline_score, settings.task3_yoloe_thermal_min_score)
-        self.assertEqual(len(thermal_filtered), 1)
-        self.assertEqual(rgb_filtered, [])
+        self.assertGreaterEqual(borderline_score, settings.task3_yoloe_min_score)
+        self.assertLess(borderline_score, settings.task3_yoloe_thermal_min_score)
+        self.assertEqual(thermal_filtered, [])
+        self.assertEqual(len(rgb_filtered), 1)
 
     def test_yoloe_inlier_ratio_monotonicity(self) -> None:
         settings = MvpRuntimeSettings()
@@ -211,7 +213,7 @@ class Task3ScoringTests(unittest.TestCase):
     def test_default_yoloe_scoring_constants_are_calibrated_values(self) -> None:
         settings = MvpRuntimeSettings()
         self.assertAlmostEqual(settings.task3_yoloe_min_score, 0.4520, places=6)
-        self.assertAlmostEqual(settings.task3_yoloe_thermal_min_score, 0.3240, places=6)
+        self.assertAlmostEqual(settings.task3_yoloe_thermal_min_score, 0.50, places=6)
         self.assertAlmostEqual(settings.task3_yoloe_score_confidence_weight, 0.25, places=6)
         self.assertAlmostEqual(settings.task3_yoloe_score_matches_weight, 0.61, places=6)
         self.assertAlmostEqual(settings.task3_yoloe_score_inlier_weight, 0.14, places=6)
