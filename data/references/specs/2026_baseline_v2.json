@@ -1,0 +1,51 @@
+{
+  "version": "v2",
+  "created": "2026-04-20",
+  "source": "official_THYZ_2026_Ornek_Veri_1_Referans_Nesneler",
+  "references": {
+    "ref_01": {
+      "file": "ref_01.jpg",
+      "modality": "rgb",
+      "detector": "yoloe",
+      "dimensions": [3019, 2145],
+      "source_exif": "DJI M3T"
+    },
+    "ref_02": {
+      "file": "ref_02.jpg",
+      "modality": "rgb",
+      "detector": "orb",
+      "detector_modalities": ["rgb"],
+      "dimensions": [3388, 2095],
+      "source_exif": "DJI M3T"
+    },
+    "ref_03": {
+      "file": "ref_03.jpg",
+      "modality": "rgb",
+      "detector": "orb",
+      "detector_modalities": ["rgb"],
+      "dimensions": [1716, 1516],
+      "source_exif": "DJI M3T"
+    },
+    "ref_04": {
+      "file": "ref_04.jpg",
+      "modality": "thermal",
+      "detector": "yoloe",
+      "dimensions": [459, 428],
+      "source_exif": "DJI M3T WhiteHot"
+    },
+    "ref_05": {
+      "file": "ref_05.jpg",
+      "modality": "unknown",
+      "detector": "yoloe",
+      "dimensions": [791, 688],
+      "source_exif": "none"
+    },
+    "ref_06": {
+      "file": "ref_06.jpg",
+      "modality": "unknown",
+      "detector": "yoloe",
+      "dimensions": [857, 450],
+      "source_exif": "none"
+    }
+  }
+}

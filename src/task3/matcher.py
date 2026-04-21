@@ -6,7 +6,7 @@ from typing import Any
 
 from src.config.settings import MvpRuntimeSettings
 from src.core.frame_state import CanonicalUndefinedObject, DecodedFrame, FrameEnvelope
-from src.core.utils import extract_frame_index
+from src.core.utils import extract_frame_index, infer_modality
 from src.core.vision import is_cv2_available
 from src.task3.reference_cache import ReferenceCache
 
@@ -117,8 +117,25 @@ class Task3Matcher:
             return []
 
         if requested_mode == "yoloe_vp_lightglue":
+            current_modality = decoded_frame.modality if decoded_frame is not None else infer_modality(frame.video_name)
+            active_ids = self.reference_cache.filter_reference_ids_by_detector_modality(available_ids, modality=current_modality)
+            if not active_ids:
+                self.last_run_info["effective_mode"] = "none"
+                return []
+            yoloe_ids, orb_ids = self.reference_cache.split_reference_ids_by_detector(active_ids)
+            self.last_run_info["yoloe_routed_refs"] = list(yoloe_ids)
+            self.last_run_info["orb_routed_refs"] = list(orb_ids)
+            if orb_ids:
+                routed_matches = self._match_with_per_reference_routing(
+                    frame,
+                    decoded_frame,
+                    yoloe_reference_ids=yoloe_ids,
+                    orb_reference_ids=orb_ids,
+                )
+                self._finalize_info(routed_matches, effective_mode="per_reference_routing")
+                return routed_matches
             try:
-                matches = self._match_with_yoloe_vp_lightglue(decoded_frame, available_ids, scenario_id=frame.video_name)
+                matches = self._match_with_yoloe_vp_lightglue(decoded_frame, active_ids, scenario_id=frame.video_name)
                 self._finalize_info(matches, effective_mode="yoloe_vp_lightglue")
                 return matches
             except Exception as exc:
@@ -150,6 +167,11 @@ class Task3Matcher:
             "effective_mode": requested_mode if requested_mode != "yoloe_vp_lightglue" else "orb_template",
             "fallback_reason": None,
             "references_loaded": references_loaded,
+            "yoloe_routed_refs": [],
+            "orb_routed_refs": [],
+            "yoloe_candidates_total": 0,
+            "orb_candidates_total": 0,
+            "orb_placeholder_candidates": 0,
             "yoloe_inference_ms": 0.0,
             "lightglue_verify_ms_total": 0.0,
             "homography_compute_ms_total": 0.0,
@@ -199,6 +221,88 @@ class Task3Matcher:
             raise RuntimeError(exc.reason) from exc
         self.last_run_info.update(task3_info)
         return matches
+
+    def _match_with_per_reference_routing(
+        self,
+        frame: FrameEnvelope,
+        decoded_frame: DecodedFrame | None,
+        *,
+        yoloe_reference_ids: list[str],
+        orb_reference_ids: list[str],
+    ) -> list[CanonicalUndefinedObject]:
+        requested_mode = "yoloe_vp_lightglue"
+        routing_info = self._empty_task3_info(
+            requested_mode=requested_mode,
+            references_loaded=len(yoloe_reference_ids) + len(orb_reference_ids),
+        )
+        routing_info["effective_mode"] = "per_reference_routing"
+        routing_info["yoloe_routed_refs"] = list(yoloe_reference_ids)
+        routing_info["orb_routed_refs"] = list(orb_reference_ids)
+
+        merged: list[CanonicalUndefinedObject] = []
+        yoloe_candidate_count = 0
+        orb_candidate_count = 0
+        total_generated = 0
+        total_gate_rejected = 0
+        fallback_reasons: list[str] = []
+
+        if yoloe_reference_ids:
+            try:
+                yoloe_matches = self._match_with_yoloe_vp_lightglue(
+                    decoded_frame,
+                    yoloe_reference_ids,
+                    scenario_id=frame.video_name,
+                )
+                yoloe_info = dict(self.last_run_info)
+                merged.extend(yoloe_matches)
+                yoloe_candidate_count += len(yoloe_matches)
+                total_generated += int(yoloe_info.get("candidates_generated", len(yoloe_matches)))
+                total_gate_rejected += int(yoloe_info.get("candidates_rejected_by_gate", 0))
+                routing_info["yoloe_inference_ms"] += float(yoloe_info.get("yoloe_inference_ms", 0.0))
+                routing_info["lightglue_verify_ms_total"] += float(yoloe_info.get("lightglue_verify_ms_total", 0.0))
+                routing_info["homography_compute_ms_total"] += float(yoloe_info.get("homography_compute_ms_total", 0.0))
+            except Exception as exc:
+                reason = str(exc)
+                fallback_reasons.append(reason if reason in KNOWN_FALLBACK_REASONS else "backend_exception")
+                fallback_matches = self._match_with_real_orb_only(decoded_frame, yoloe_reference_ids)
+                merged.extend(fallback_matches)
+                orb_candidate_count += len(fallback_matches)
+                total_generated += len(fallback_matches)
+
+        if orb_reference_ids:
+            orb_matches = self._match_with_real_orb_only(decoded_frame, orb_reference_ids)
+            merged.extend(orb_matches)
+            orb_candidate_count += len(orb_matches)
+            total_generated += len(orb_matches)
+
+        routing_info["fallback_reason"] = None if not fallback_reasons else ("mixed" if len(set(fallback_reasons)) > 1 else fallback_reasons[0])
+        routing_info["yoloe_candidates_total"] = yoloe_candidate_count
+        routing_info["orb_candidates_total"] = orb_candidate_count
+        routing_info["orb_placeholder_candidates"] = 0
+        routing_info["yoloe_inference_ms"] = round(float(routing_info["yoloe_inference_ms"]), 4)
+        routing_info["lightglue_verify_ms_total"] = round(float(routing_info["lightglue_verify_ms_total"]), 4)
+        routing_info["homography_compute_ms_total"] = round(float(routing_info["homography_compute_ms_total"]), 4)
+        routing_info["candidates_generated"] = total_generated
+        routing_info["candidates_rejected_by_gate"] = total_gate_rejected
+        routing_info["candidates_accepted"] = len(merged)
+        routing_info["candidates_rejected"] = max(total_generated - len(merged), 0)
+        self.last_run_info = routing_info
+        return sorted(merged, key=lambda item: float(item.metadata.get("match_score", 0.0)), reverse=True)
+
+    def _match_with_real_orb_only(
+        self,
+        decoded_frame: DecodedFrame | None,
+        reference_ids: list[str],
+    ) -> list[CanonicalUndefinedObject]:
+        if not reference_ids or not is_cv2_available() or decoded_frame is None or decoded_frame.gray is None:
+            return []
+        matched = self._match_with_descriptors(decoded_frame, reference_ids)
+        if matched:
+            return [item for item in matched if not str(item.metadata.get("matcher_source", "")).startswith("task3_placeholder")]
+        matched = self._match_with_template(decoded_frame, reference_ids)
+        if matched:
+            return [item for item in matched if not str(item.metadata.get("matcher_source", "")).startswith("task3_placeholder")]
+        return []
 
     def _collect_proposals(
         self,

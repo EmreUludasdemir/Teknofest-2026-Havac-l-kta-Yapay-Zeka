@@ -526,7 +526,9 @@ class YoloeVpLightGlueBackend:
                     device=resolved_device,
                     runtime_settings=self.runtime_settings,
                 )
-                self.reference_bank.build(self.reference_cache.list_ids() or reference_ids)
+            requested_ids = [reference_id for reference_id in reference_ids if self.reference_cache.get(reference_id)]
+            if self.reference_bank.ref_names != requested_ids:
+                self.reference_bank.build(requested_ids)
             if self.verifier is None:
                 self.verifier = LightGlueCropVerifier(
                     extractor=self.extractor,
