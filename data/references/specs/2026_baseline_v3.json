@@ -1,5 +1,5 @@
 {
-  "version": "v2_ref04_orb_probe",
+  "version": "v3",
   "created": "2026-04-21",
   "source": "official_THYZ_2026_Ornek_Veri_1_Referans_Nesneler",
   "references": {
@@ -22,11 +22,5 @@
       "file": "ref_06.jpg"
     }
   },
-  "overrides": {
-    "ref_04": {
-      "detector": "orb",
-      "detector_modalities": ["thermal"],
-      "rationale": "probe override: route thermal ref_04 through ORB"
-    }
-  }
+  "overrides": {}
 }

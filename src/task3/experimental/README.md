@@ -16,7 +16,9 @@ Bu klasor `yoloe_vp_lightglue` backend'ini tutar.
 
 ## Frozen Configuration (2026-04-21)
 
-Thermal threshold raised to 0.50 (2026-04-21) to prioritize FP minimization. Thermal TPs reduced (4→1) but all thermal absent FPs eliminated (7→0). Trade-off justified by mAP penalty economics and evidence that thermal TPs were semantically weak in the YOLOE/LightGlue RGB-biased pipeline.
+Thermal threshold raised to 0.50 (2026-04-21) to prioritize FP minimization. Thermal TPs reduced (4 -> 1) but all thermal absent FPs eliminated (7 -> 0). Trade-off justified by mAP penalty economics and evidence that thermal TPs were semantically weak in the YOLOE/LightGlue RGB-biased pipeline.
+
+Reference ingestion now defaults to the auto-routing spec `data/references/specs/2026_baseline_v3.json`. The older `2026_baseline_v2.json` is preserved for backward compatibility and probe replay only. Manual detector overrides remain available through the top-level `overrides` section in the v3 spec for competition-day edge cases.
 
 | Setting | Value |
 |---|---|
@@ -34,5 +36,16 @@ Manifest validation on 2026-04-21 (`2026-04-21_thermal_threshold_050_v1`):
 | thermal_cross_sensor_proxy | 4 | 1 |
 | rgb_absent_target_proxy_2025 | 1 | 1 |
 | thermal_absent_target_proxy_2025 (FP proxy) | 7 | **0** |
+
+Auto-routing validation on 2026-04-21 (`2026-04-21_auto_routing_v1`) matched the frozen manual-routing totals exactly:
+
+| Scenario | Manual v2 | Auto v3 |
+|---|---|---|
+| rgb_reference_session | 6 | 6 |
+| thermal_cross_sensor_proxy | 1 | 1 |
+| rgb_absent_target_proxy_2025 | 1 | 1 |
+| thermal_absent_target_proxy_2025 (FP proxy) | 0 | 0 |
+
+The only policy disagreement was `ref_01`: manual v2 kept it on YOLOE, while auto-routing assigns it to ORB. Validation showed no measurable impact on the four archived scenarios (`ref_01` contributed 0 accepts / 0 FP in both setups), so auto-routing is frozen as the new default and `v2` remains deprecated but loadable.
 
 No further threshold tuning is planned before TEKNOFEST 2026 competition deadlines. Post-competition iterations should revisit thermal recall with larger probe data and cross-sensor-aware reference banks.

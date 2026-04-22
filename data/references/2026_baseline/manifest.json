@@ -2,7 +2,7 @@
   "version": "v2",
   "source": "official_THYZ_2026_Ornek_Veri_1_Referans_Nesneler",
   "source_directory": "data/THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001/THYZ_2026_Ornek_Veri_Seti/THYZ_2026_Ornek_Veri_1_Referans_Nesneler",
-  "spec_path": "data/references/specs/2026_baseline_v2.json",
+  "spec_path": "data/references/specs/2026_baseline_v3.json",
   "reference_count": 6,
   "items": [
     {

@@ -53,11 +53,16 @@ class Task3RoutingTests(unittest.TestCase):
                         "references": {
                             "ref_001": {
                                 "file": "ref_001.pgm",
-                                "modality": "rgb",
-                                "detector": "orb",
-                                "dimensions": [8, 8],
+                                "dimensions": [8, 8]
                             }
-                        }
+                        },
+                        "overrides": {
+                            "ref_001": {
+                                "detector": "orb",
+                                "detector_modalities": ["rgb"],
+                                "rationale": "test override"
+                            }
+                        },
                     }
                 ),
                 encoding="utf-8",
@@ -67,7 +72,7 @@ class Task3RoutingTests(unittest.TestCase):
             cache.preload_from_directory(temp_path)
 
             self.assertEqual(cache.get_detector("ref_001"), "orb")
-            self.assertEqual(cache.get("ref_001")["reference_metadata"]["modality"], "rgb")
+            self.assertEqual(cache.get("ref_001")["reference_metadata"]["override"]["detector"], "orb")
 
     def test_invalid_detector_value_raises(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -83,9 +88,12 @@ class Task3RoutingTests(unittest.TestCase):
                         "references": {
                             "ref_001": {
                                 "file": "ref_001.pgm",
-                                "modality": "rgb",
-                                "detector": "xyz",
-                                "dimensions": [8, 8],
+                                "dimensions": [8, 8]
+                            }
+                        },
+                        "overrides": {
+                            "ref_001": {
+                                "detector": "xyz"
                             }
                         }
                     }
@@ -177,11 +185,13 @@ class Task3RoutingTests(unittest.TestCase):
                     {
                         "references": {
                             "ref_001": {
-                                "file": "ref_001.pgm",
-                                "modality": "rgb",
+                                "file": "ref_001.pgm"
+                            }
+                        },
+                        "overrides": {
+                            "ref_001": {
                                 "detector": "orb",
-                                "detector_modalities": ["infrared"],
-                                "dimensions": [8, 8],
+                                "detector_modalities": ["infrared"]
                             }
                         }
                     }

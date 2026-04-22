@@ -167,6 +167,8 @@ class Task3Matcher:
             "effective_mode": requested_mode if requested_mode != "yoloe_vp_lightglue" else "orb_template",
             "fallback_reason": None,
             "references_loaded": references_loaded,
+            "auto_routing": self.reference_cache.get_auto_routing_summary(),
+            "overrides_applied": self.reference_cache.get_overrides_applied(),
             "yoloe_routed_refs": [],
             "orb_routed_refs": [],
             "yoloe_candidates_total": 0,
