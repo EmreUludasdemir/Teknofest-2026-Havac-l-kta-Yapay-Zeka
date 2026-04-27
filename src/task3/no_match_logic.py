@@ -4,6 +4,8 @@ from src.core.frame_state import CanonicalUndefinedObject
 
 ORB_SCORE_CONFIDENCE_WEIGHT = 0.70
 ORB_SCORE_MATCHES_WEIGHT = 0.30
+SUPPRESSION_MODE_GLOBAL_TOP_1 = "global_top_1"
+SUPPRESSION_MODE_PER_REFERENCE_TOP_1 = "per_reference_top_1"
 
 
 def compute_mode_candidate_score(
@@ -60,6 +62,7 @@ def filter_no_match_candidates(
     modality: str | None = None,
     yoloe_thermal_min_score: float | None = None,
     ambiguity_margin: float = 0.05,
+    suppression_mode: str = SUPPRESSION_MODE_GLOBAL_TOP_1,
 ) -> list[CanonicalUndefinedObject]:
     """Belirsiz durumda kutu basmaz; tek guvenilir adayi birakir."""
 
@@ -74,6 +77,22 @@ def filter_no_match_candidates(
     filtered = [item for item in scored if float(item.metadata.get("match_score", 0.0)) >= resolved_min_score]
     if not filtered:
         return []
+    if suppression_mode == SUPPRESSION_MODE_PER_REFERENCE_TOP_1:
+        grouped: dict[str, list[CanonicalUndefinedObject]] = {}
+        for item in filtered:
+            grouped.setdefault(str(item.object_id), []).append(item)
+        selected: list[CanonicalUndefinedObject] = []
+        for reference_id in sorted(grouped):
+            per_reference = grouped[reference_id]
+            if len(per_reference) > 1:
+                best = float(per_reference[0].metadata.get("match_score", 0.0))
+                second = float(per_reference[1].metadata.get("match_score", 0.0))
+                if (best - second) < ambiguity_margin:
+                    continue
+            selected.append(per_reference[0])
+        return sorted(selected, key=lambda item: float(item.metadata.get("match_score", 0.0)), reverse=True)
+    if suppression_mode != SUPPRESSION_MODE_GLOBAL_TOP_1:
+        raise ValueError(f"Unsupported suppression_mode: {suppression_mode}")
     if len(filtered) > 1:
         best = float(filtered[0].metadata.get("match_score", 0.0))
         second = float(filtered[1].metadata.get("match_score", 0.0))

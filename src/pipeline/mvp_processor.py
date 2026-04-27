@@ -122,6 +122,7 @@ class MvpFrameProcessor:
                 modality=decoded_frame.modality,
                 yoloe_thermal_min_score=self.runtime_settings.task3_yoloe_thermal_min_score,
                 ambiguity_margin=self.runtime_settings.task3_ambiguity_margin,
+                suppression_mode=self.reference_cache.get_candidate_suppression_mode(),
             )
             verified_matches = verify_matches(
                 frame,

@@ -26,6 +26,7 @@ class ReferenceCache:
     items: dict[str, dict[str, Any]] = field(default_factory=dict)
     auto_routing_summary: dict[str, dict[str, Any]] = field(default_factory=dict)
     overrides_applied: list[dict[str, Any]] = field(default_factory=list)
+    per_reference_suppression: bool = False
     IMAGE_EXTENSIONS: ClassVar[tuple[str, ...]] = (".jpg", ".jpeg", ".png", ".bmp", ".webp", ".pgm")
     VALID_DETECTORS: ClassVar[set[str]] = {"yoloe", "orb", "both"}
     VALID_MODALITIES: ClassVar[set[str]] = {"rgb", "thermal", "unknown"}
@@ -45,6 +46,9 @@ class ReferenceCache:
 
     def get_overrides_applied(self) -> list[dict[str, Any]]:
         return [dict(item) for item in self.overrides_applied]
+
+    def get_candidate_suppression_mode(self) -> str:
+        return "per_reference_top_1" if self.per_reference_suppression else "global_top_1"
 
     def set_learned_embedding(self, reference_id: str, backbone_name: str, embedding: Any) -> None:
         if reference_id not in self.items:
@@ -111,11 +115,13 @@ class ReferenceCache:
         self.items.clear()
         self.auto_routing_summary.clear()
         self.overrides_applied.clear()
+        self.per_reference_suppression = False
 
         spec_payload = self._load_reference_spec(directory)
         reference_metadata = spec_payload["references"]
         overrides = spec_payload["overrides"]
         auto_routing_enabled = bool(spec_payload.get("auto_routing_enabled"))
+        self.per_reference_suppression = bool(spec_payload.get("per_reference_suppression", False))
         file_to_reference_id = {
             str(metadata.get("file", "")).lower(): reference_id
             for reference_id, metadata in reference_metadata.items()
@@ -265,24 +271,27 @@ class ReferenceCache:
     def _load_reference_spec(self, directory: Path) -> dict[str, dict[str, Any]]:
         manifest_path = directory / "manifest.json"
         if not manifest_path.exists():
-            return {"references": {}, "overrides": {}, "auto_routing_enabled": False}
+            return {"references": {}, "overrides": {}, "auto_routing_enabled": False, "per_reference_suppression": False}
 
         manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
         spec_path_raw = str(manifest_payload.get("spec_path") or "").strip()
         if not spec_path_raw:
-            return {"references": {}, "overrides": {}, "auto_routing_enabled": False}
+            return {"references": {}, "overrides": {}, "auto_routing_enabled": False, "per_reference_suppression": False}
 
         spec_path = Path(spec_path_raw)
         if not spec_path.is_absolute():
             candidate = directory / spec_path_raw
             spec_path = candidate if candidate.exists() else Path(spec_path_raw)
         if not spec_path.exists():
-            return {"references": {}, "overrides": {}, "auto_routing_enabled": False}
+            return {"references": {}, "overrides": {}, "auto_routing_enabled": False, "per_reference_suppression": False}
 
         spec_payload = json.loads(spec_path.read_text(encoding="utf-8"))
         references = spec_payload.get("references", {})
         if not isinstance(references, dict):
             raise ValueError(f"Task3 reference spec malformed: {spec_path}")
+        per_reference_suppression = spec_payload.get("per_reference_suppression", False)
+        if not isinstance(per_reference_suppression, bool):
+            raise ValueError(f"Task3 reference spec per_reference_suppression must be boolean: {spec_path}")
         overrides_payload = spec_payload.get("overrides", {})
         if overrides_payload is None:
             overrides_payload = {}
@@ -330,6 +339,7 @@ class ReferenceCache:
             "references": metadata_by_reference,
             "overrides": normalized_overrides,
             "auto_routing_enabled": True,
+            "per_reference_suppression": per_reference_suppression,
         }
 
     def _validate_detector(self, detector: str, reference_id: str) -> str:
