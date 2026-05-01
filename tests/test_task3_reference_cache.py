@@ -33,7 +33,7 @@ class Task3ReferenceCacheTests(unittest.TestCase):
         loaded = cache.preload_from_directory(Path("data/references/2026_baseline"))
 
         self.assertEqual(loaded, 6)
-        self.assertEqual(cache.get_candidate_suppression_mode(), "global_top_1")
+        self.assertEqual(cache.get_candidate_suppression_mode(), "per_reference_top_1")
         expected = {
             "ref_01": ("rgb", "orb", ["rgb"]),
             "ref_02": ("rgb", "orb", ["rgb"]),
@@ -220,6 +220,31 @@ class Task3ReferenceCacheTests(unittest.TestCase):
 
         self.assertEqual(loaded, 1)
         self.assertEqual(cache.get_candidate_suppression_mode(), "per_reference_top_1")
+
+    def test_spec_can_explicitly_opt_out_of_per_reference_suppression(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            temp_path = Path(tmp_dir)
+            shutil.copyfile("data/references/2026_baseline/ref_05.jpg", temp_path / "ref_05.jpg")
+            (temp_path / "manifest.json").write_text(json.dumps({"spec_path": "spec.json"}), encoding="utf-8")
+            (temp_path / "spec.json").write_text(
+                json.dumps(
+                    {
+                        "per_reference_suppression": False,
+                        "references": {
+                            "ref_05": {
+                                "file": "ref_05.jpg",
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            cache = ReferenceCache()
+            loaded = cache.preload_from_directory(temp_path)
+
+        self.assertEqual(loaded, 1)
+        self.assertEqual(cache.get_candidate_suppression_mode(), "global_top_1")
 
 
 if __name__ == "__main__":

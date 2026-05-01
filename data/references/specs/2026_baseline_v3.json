@@ -2,7 +2,7 @@
   "version": "v3",
   "created": "2026-04-21",
   "source": "official_THYZ_2026_Ornek_Veri_1_Referans_Nesneler",
-  "per_reference_suppression": false,
+  "per_reference_suppression": true,
   "references": {
     "ref_01": {
       "file": "ref_01.jpg"
