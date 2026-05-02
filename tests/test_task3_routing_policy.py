@@ -21,12 +21,18 @@ class Task3RoutingPolicyTests(unittest.TestCase):
 
     def test_official_references_match_calibrated_policy(self) -> None:
         expected = {
-            "ref_01.jpg": ("orb", ["rgb"]),
-            "ref_02.jpg": ("orb", ["rgb"]),
-            "ref_03.jpg": ("orb", ["rgb"]),
-            "ref_04.jpg": ("yoloe", ["thermal"]),
-            "ref_05.jpg": ("yoloe", ["rgb"]),
-            "ref_06.jpg": ("yoloe", ["rgb"]),
+            "Referans_Nesne_01.JPG": ("orb", ["rgb"]),
+            "Referans_Nesne_02.JPG": ("orb", ["rgb"]),
+            "Referans_Nesne_03.JPG": ("orb", ["rgb"]),
+            "Referans_Nesne_04.JPG": ("yoloe", ["thermal"]),
+            "Referans_Nesne_05.jpg": ("yoloe", ["rgb"]),
+            "Referans_Nesne_06.jpg": ("yoloe", ["rgb"]),
+            "Referans_Nesne_07.png": ("both", ["rgb", "thermal"]),
+            "Referans_Nesne_08.png": ("yoloe", ["rgb"]),
+            "Referans_Nesne_09.png": ("yoloe", ["rgb"]),
+            "Referans_Nesne_10.png": ("yoloe", ["rgb"]),
+            "Referans_Nesne_11.png": ("both", ["rgb", "thermal"]),
+            "Referans_Nesne_12.png": ("yoloe", ["thermal"]),
         }
         for filename, (detector, modalities) in expected.items():
             assignment = assign_detector(self.reference_dir / filename)

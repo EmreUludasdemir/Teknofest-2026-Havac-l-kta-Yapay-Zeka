@@ -16,7 +16,7 @@ class Task3ModalityDetectionTests(unittest.TestCase):
         self.reference_dir = Path("data/references/2026_baseline")
 
     def test_official_rgb_references_are_detected_from_exif(self) -> None:
-        for reference_name in ("ref_01.jpg", "ref_02.jpg", "ref_03.jpg"):
+        for reference_name in ("Referans_Nesne_01.JPG", "Referans_Nesne_02.JPG", "Referans_Nesne_03.JPG"):
             modality, diagnostics = detect_modality(self.reference_dir / reference_name)
             self.assertEqual(modality, Modality.RGB, reference_name)
             self.assertEqual(diagnostics["method"], "exif", reference_name)
@@ -24,17 +24,27 @@ class Task3ModalityDetectionTests(unittest.TestCase):
             self.assertIn("default", diagnostics["exif_signals"], reference_name)
 
     def test_official_thermal_reference_is_detected_from_exif(self) -> None:
-        modality, diagnostics = detect_modality(self.reference_dir / "ref_04.jpg")
+        modality, diagnostics = detect_modality(self.reference_dir / "Referans_Nesne_04.JPG")
         self.assertEqual(modality, Modality.THERMAL)
         self.assertEqual(diagnostics["method"], "exif")
         self.assertEqual(diagnostics["confidence"], "high")
         self.assertIn("whitehot", diagnostics["exif_signals"])
 
     def test_exifless_official_references_fall_back_to_pixel_analysis(self) -> None:
-        for reference_name in ("ref_05.jpg", "ref_06.jpg"):
+        expected_modalities = {
+            "Referans_Nesne_05.jpg": Modality.RGB,
+            "Referans_Nesne_06.jpg": Modality.RGB,
+            "Referans_Nesne_07.png": Modality.UNKNOWN,
+            "Referans_Nesne_08.png": Modality.RGB,
+            "Referans_Nesne_09.png": Modality.RGB,
+            "Referans_Nesne_10.png": Modality.RGB,
+            "Referans_Nesne_11.png": Modality.THERMAL,
+            "Referans_Nesne_12.png": Modality.THERMAL,
+        }
+        for reference_name, expected_modality in expected_modalities.items():
             modality, diagnostics = detect_modality(self.reference_dir / reference_name)
             self.assertEqual(diagnostics["method"], "pixel", reference_name)
-            self.assertIn(modality, {Modality.RGB, Modality.UNKNOWN}, reference_name)
+            self.assertEqual(modality, expected_modality, reference_name)
             self.assertEqual(diagnostics["exif_signals"], [], reference_name)
             self.assertIn("mean_saturation", diagnostics["pixel_signals"], reference_name)
 

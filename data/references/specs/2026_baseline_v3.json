@@ -1,26 +1,116 @@
 {
   "version": "v3",
-  "created": "2026-04-21",
+  "created": "2026-05-02",
   "source": "official_THYZ_2026_Ornek_Veri_1_Referans_Nesneler",
   "per_reference_suppression": true,
   "references": {
     "ref_01": {
-      "file": "ref_01.jpg"
+      "file": "Referans_Nesne_01.JPG",
+      "dimensions": [
+        3019,
+        2145
+      ],
+      "modality": "rgb",
+      "source_exif": "default"
     },
     "ref_02": {
-      "file": "ref_02.jpg"
+      "file": "Referans_Nesne_02.JPG",
+      "dimensions": [
+        3388,
+        2095
+      ],
+      "modality": "rgb",
+      "source_exif": "default"
     },
     "ref_03": {
-      "file": "ref_03.jpg"
+      "file": "Referans_Nesne_03.JPG",
+      "dimensions": [
+        1716,
+        1516
+      ],
+      "modality": "rgb",
+      "source_exif": "default"
     },
     "ref_04": {
-      "file": "ref_04.jpg"
+      "file": "Referans_Nesne_04.JPG",
+      "dimensions": [
+        459,
+        428
+      ],
+      "modality": "thermal",
+      "source_exif": "whitehot"
     },
     "ref_05": {
-      "file": "ref_05.jpg"
+      "file": "Referans_Nesne_05.jpg",
+      "dimensions": [
+        791,
+        688
+      ],
+      "modality": "rgb",
+      "source_exif": null
     },
     "ref_06": {
-      "file": "ref_06.jpg"
+      "file": "Referans_Nesne_06.jpg",
+      "dimensions": [
+        857,
+        450
+      ],
+      "modality": "rgb",
+      "source_exif": null
+    },
+    "ref_07": {
+      "file": "Referans_Nesne_07.png",
+      "dimensions": [
+        398,
+        210
+      ],
+      "modality": "unknown",
+      "source_exif": null
+    },
+    "ref_08": {
+      "file": "Referans_Nesne_08.png",
+      "dimensions": [
+        544,
+        357
+      ],
+      "modality": "rgb",
+      "source_exif": null
+    },
+    "ref_09": {
+      "file": "Referans_Nesne_09.png",
+      "dimensions": [
+        157,
+        198
+      ],
+      "modality": "rgb",
+      "source_exif": null
+    },
+    "ref_10": {
+      "file": "Referans_Nesne_10.png",
+      "dimensions": [
+        161,
+        272
+      ],
+      "modality": "rgb",
+      "source_exif": null
+    },
+    "ref_11": {
+      "file": "Referans_Nesne_11.png",
+      "dimensions": [
+        978,
+        576
+      ],
+      "modality": "thermal",
+      "source_exif": null
+    },
+    "ref_12": {
+      "file": "Referans_Nesne_12.png",
+      "dimensions": [
+        402,
+        189
+      ],
+      "modality": "thermal",
+      "source_exif": null
     }
   },
   "overrides": {}

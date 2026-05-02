@@ -1,0 +1,129 @@
+{
+  "version": "v3",
+  "source": "official_THYZ_2026_Ornek_Veri_1_Referans_Nesneler",
+  "source_directory": "data/THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001/THYZ_2026_Ornek_Veri_Seti/THYZ_2026_Ornek_Veri_1_Referans_Nesneler",
+  "spec_path": "../specs/2026_baseline_v3.json",
+  "reference_count": 12,
+  "items": [
+    {
+      "reference_id": "ref_01",
+      "output_file": "Referans_Nesne_01.JPG",
+      "dimensions": [
+        3019,
+        2145
+      ],
+      "modality": "rgb",
+      "source_file": "Referans_Nesne_01.JPG"
+    },
+    {
+      "reference_id": "ref_02",
+      "output_file": "Referans_Nesne_02.JPG",
+      "dimensions": [
+        3388,
+        2095
+      ],
+      "modality": "rgb",
+      "source_file": "Referans_Nesne_02.JPG"
+    },
+    {
+      "reference_id": "ref_03",
+      "output_file": "Referans_Nesne_03.JPG",
+      "dimensions": [
+        1716,
+        1516
+      ],
+      "modality": "rgb",
+      "source_file": "Referans_Nesne_03.JPG"
+    },
+    {
+      "reference_id": "ref_04",
+      "output_file": "Referans_Nesne_04.JPG",
+      "dimensions": [
+        459,
+        428
+      ],
+      "modality": "thermal",
+      "source_file": "Referans_Nesne_04.JPG"
+    },
+    {
+      "reference_id": "ref_05",
+      "output_file": "Referans_Nesne_05.jpg",
+      "dimensions": [
+        791,
+        688
+      ],
+      "modality": "rgb",
+      "source_file": "Referans_Nesne_05.jpg"
+    },
+    {
+      "reference_id": "ref_06",
+      "output_file": "Referans_Nesne_06.jpg",
+      "dimensions": [
+        857,
+        450
+      ],
+      "modality": "rgb",
+      "source_file": "Referans_Nesne_06.jpg"
+    },
+    {
+      "reference_id": "ref_07",
+      "output_file": "Referans_Nesne_07.png",
+      "dimensions": [
+        398,
+        210
+      ],
+      "modality": "unknown",
+      "source_file": "Referans_Nesne_07.png"
+    },
+    {
+      "reference_id": "ref_08",
+      "output_file": "Referans_Nesne_08.png",
+      "dimensions": [
+        544,
+        357
+      ],
+      "modality": "rgb",
+      "source_file": "Referans_Nesne_08.png"
+    },
+    {
+      "reference_id": "ref_09",
+      "output_file": "Referans_Nesne_09.png",
+      "dimensions": [
+        157,
+        198
+      ],
+      "modality": "rgb",
+      "source_file": "Referans_Nesne_09.png"
+    },
+    {
+      "reference_id": "ref_10",
+      "output_file": "Referans_Nesne_10.png",
+      "dimensions": [
+        161,
+        272
+      ],
+      "modality": "rgb",
+      "source_file": "Referans_Nesne_10.png"
+    },
+    {
+      "reference_id": "ref_11",
+      "output_file": "Referans_Nesne_11.png",
+      "dimensions": [
+        978,
+        576
+      ],
+      "modality": "thermal",
+      "source_file": "Referans_Nesne_11.png"
+    },
+    {
+      "reference_id": "ref_12",
+      "output_file": "Referans_Nesne_12.png",
+      "dimensions": [
+        402,
+        189
+      ],
+      "modality": "thermal",
+      "source_file": "Referans_Nesne_12.png"
+    }
+  ]
+}

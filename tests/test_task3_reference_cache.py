@@ -15,6 +15,21 @@ from src.core.frame_state import CanonicalUndefinedObject, DecodedFrame, FrameEn
 from src.task3.matcher import Task3Matcher
 from src.task3.reference_cache import ReferenceCache
 
+OFFICIAL_REFERENCE_FILES = {
+    "ref_01": "Referans_Nesne_01.JPG",
+    "ref_02": "Referans_Nesne_02.JPG",
+    "ref_03": "Referans_Nesne_03.JPG",
+    "ref_04": "Referans_Nesne_04.JPG",
+    "ref_05": "Referans_Nesne_05.jpg",
+    "ref_06": "Referans_Nesne_06.jpg",
+    "ref_07": "Referans_Nesne_07.png",
+    "ref_08": "Referans_Nesne_08.png",
+    "ref_09": "Referans_Nesne_09.png",
+    "ref_10": "Referans_Nesne_10.png",
+    "ref_11": "Referans_Nesne_11.png",
+    "ref_12": "Referans_Nesne_12.png",
+}
+
 
 def _candidate(object_id: str, score: float, source: str) -> CanonicalUndefinedObject:
     return CanonicalUndefinedObject(
@@ -32,7 +47,7 @@ class Task3ReferenceCacheTests(unittest.TestCase):
         cache = ReferenceCache()
         loaded = cache.preload_from_directory(Path("data/references/2026_baseline"))
 
-        self.assertEqual(loaded, 6)
+        self.assertEqual(loaded, 12)
         self.assertEqual(cache.get_candidate_suppression_mode(), "per_reference_top_1")
         expected = {
             "ref_01": ("rgb", "orb", ["rgb"]),
@@ -41,6 +56,12 @@ class Task3ReferenceCacheTests(unittest.TestCase):
             "ref_04": ("thermal", "yoloe", ["thermal"]),
             "ref_05": ("rgb", "yoloe", ["rgb"]),
             "ref_06": ("rgb", "yoloe", ["rgb"]),
+            "ref_07": ("unknown", "both", ["rgb", "thermal"]),
+            "ref_08": ("rgb", "yoloe", ["rgb"]),
+            "ref_09": ("rgb", "yoloe", ["rgb"]),
+            "ref_10": ("rgb", "yoloe", ["rgb"]),
+            "ref_11": ("thermal", "both", ["rgb", "thermal"]),
+            "ref_12": ("thermal", "yoloe", ["thermal"]),
         }
         for reference_id, (modality, detector, modalities) in expected.items():
             item = cache.get(reference_id)
@@ -48,11 +69,12 @@ class Task3ReferenceCacheTests(unittest.TestCase):
             self.assertEqual(item["reference_modality"], modality, reference_id)
             self.assertEqual(item["detector"], detector, reference_id)
             self.assertEqual(item["detector_modalities"], modalities, reference_id)
+        self.assertEqual(cache.get_overrides_applied(), [])
 
     def test_manual_override_replaces_auto_assignment_and_logs_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             temp_path = Path(tmp_dir)
-            shutil.copyfile("data/references/2026_baseline/ref_01.jpg", temp_path / "ref_01.jpg")
+            shutil.copyfile(f"data/references/2026_baseline/{OFFICIAL_REFERENCE_FILES['ref_01']}", temp_path / "ref_01.jpg")
             (temp_path / "manifest.json").write_text(
                 json.dumps({"spec_path": "spec.json"}),
                 encoding="utf-8",
@@ -84,7 +106,7 @@ class Task3ReferenceCacheTests(unittest.TestCase):
     def test_malformed_override_missing_detector_raises(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             temp_path = Path(tmp_dir)
-            shutil.copyfile("data/references/2026_baseline/ref_01.jpg", temp_path / "ref_01.jpg")
+            shutil.copyfile(f"data/references/2026_baseline/{OFFICIAL_REFERENCE_FILES['ref_01']}", temp_path / "ref_01.jpg")
             (temp_path / "manifest.json").write_text(json.dumps({"spec_path": "spec.json"}), encoding="utf-8")
             (temp_path / "spec.json").write_text(
                 json.dumps(
@@ -170,7 +192,7 @@ class Task3ReferenceCacheTests(unittest.TestCase):
     def test_v2_style_spec_still_loads_while_legacy_manual_fields_are_ignored(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             temp_path = Path(tmp_dir)
-            shutil.copyfile("data/references/2026_baseline/ref_05.jpg", temp_path / "ref_05.jpg")
+            shutil.copyfile(f"data/references/2026_baseline/{OFFICIAL_REFERENCE_FILES['ref_05']}", temp_path / "ref_05.jpg")
             (temp_path / "manifest.json").write_text(json.dumps({"spec_path": "spec.json"}), encoding="utf-8")
             (temp_path / "spec.json").write_text(
                 json.dumps(
@@ -199,7 +221,7 @@ class Task3ReferenceCacheTests(unittest.TestCase):
     def test_spec_can_opt_in_to_per_reference_suppression(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             temp_path = Path(tmp_dir)
-            shutil.copyfile("data/references/2026_baseline/ref_05.jpg", temp_path / "ref_05.jpg")
+            shutil.copyfile(f"data/references/2026_baseline/{OFFICIAL_REFERENCE_FILES['ref_05']}", temp_path / "ref_05.jpg")
             (temp_path / "manifest.json").write_text(json.dumps({"spec_path": "spec.json"}), encoding="utf-8")
             (temp_path / "spec.json").write_text(
                 json.dumps(
@@ -224,7 +246,7 @@ class Task3ReferenceCacheTests(unittest.TestCase):
     def test_spec_can_explicitly_opt_out_of_per_reference_suppression(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             temp_path = Path(tmp_dir)
-            shutil.copyfile("data/references/2026_baseline/ref_05.jpg", temp_path / "ref_05.jpg")
+            shutil.copyfile(f"data/references/2026_baseline/{OFFICIAL_REFERENCE_FILES['ref_05']}", temp_path / "ref_05.jpg")
             (temp_path / "manifest.json").write_text(json.dumps({"spec_path": "spec.json"}), encoding="utf-8")
             (temp_path / "spec.json").write_text(
                 json.dumps(
