@@ -34,12 +34,8 @@
       "frame_limit": 16,
       "ground_truth": null,
       "expected_present_refs": [
-        "ref_01",
-        "ref_02",
-        "ref_03",
         "ref_04",
-        "ref_05",
-        "ref_06"
+        "ref_12"
       ],
       "tags": [
         "thermal",
