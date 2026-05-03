@@ -44,6 +44,22 @@ class ReferenceCache:
     def get_auto_routing_summary(self) -> dict[str, dict[str, Any]]:
         return {reference_id: dict(payload) for reference_id, payload in self.auto_routing_summary.items()}
 
+    def get_routing_diagnostics(self) -> dict[str, dict[str, Any]]:
+        diagnostics: dict[str, dict[str, Any]] = {}
+        for reference_id in self.list_ids():
+            item = self.get(reference_id) or {}
+            metadata = dict(item.get("reference_metadata") or {})
+            diagnostics[reference_id] = {
+                "modality": str(item.get("reference_modality") or metadata.get("modality") or "unknown"),
+                "detector": str(item.get("detector") or metadata.get("detector") or "yoloe"),
+                "detector_modalities": list(item.get("detector_modalities") or metadata.get("detector_modalities") or []),
+                "confidence": str(metadata.get("routing_confidence") or "low"),
+                "rationale": str(metadata.get("routing_rationale") or ""),
+                "signals": dict(metadata.get("routing_signals") or {}),
+                "override": dict(metadata.get("override") or {}) if metadata.get("override") else None,
+            }
+        return diagnostics
+
     def get_overrides_applied(self) -> list[dict[str, Any]]:
         return [dict(item) for item in self.overrides_applied]
 
@@ -299,10 +315,19 @@ class ReferenceCache:
             raise ValueError(f"Task3 reference spec overrides malformed: {spec_path}")
 
         metadata_by_reference: dict[str, dict[str, Any]] = {}
+        nested_overrides: dict[str, dict[str, Any]] = {}
         for reference_id, payload in references.items():
             if not isinstance(payload, dict):
                 raise ValueError(f"Task3 reference spec entry malformed for {reference_id}: {spec_path}")
-            metadata_by_reference[str(reference_id)] = {
+            reference_id_text = str(reference_id)
+            routing_override = payload.get("routing_override")
+            if routing_override is not None:
+                nested_overrides[reference_id_text] = self._normalize_override_payload(
+                    routing_override,
+                    reference_id_text,
+                    spec_path=spec_path,
+                )
+            metadata_by_reference[reference_id_text] = {
                 "modality": payload.get("modality"),
                 "dimensions": payload.get("dimensions"),
                 "source_exif": payload.get("source_exif"),
@@ -311,35 +336,58 @@ class ReferenceCache:
 
         normalized_overrides: dict[str, dict[str, Any]] = {}
         for reference_id, payload in overrides_payload.items():
-            if not isinstance(payload, dict):
-                raise ValueError(f"Task3 reference spec override malformed for {reference_id}: {spec_path}")
-            unexpected_keys = sorted(set(payload.keys()) - self.VALID_OVERRIDE_FIELDS)
-            if unexpected_keys:
+            reference_id_text = str(reference_id)
+            normalized_overrides[reference_id_text] = self._normalize_override_payload(
+                payload,
+                reference_id_text,
+                spec_path=spec_path,
+            )
+        for reference_id, payload in nested_overrides.items():
+            if reference_id in normalized_overrides:
                 raise ValueError(
-                    f"Task3 reference spec override contains unsupported fields for {reference_id}: {unexpected_keys}"
+                    f"Task3 reference spec override duplicated for {reference_id}: "
+                    f"use either top-level overrides or references.{reference_id}.routing_override"
                 )
-            if "detector" not in payload:
-                raise ValueError(f"Task3 reference spec override missing detector for {reference_id}: {spec_path}")
-            detector = self._validate_detector(str(payload["detector"]), reference_id)
-            detector_modalities = self._normalize_detector_modalities(payload.get("detector_modalities"), reference_id)
-            modality = payload.get("modality")
-            if modality is not None and str(modality) not in self.VALID_MODALITIES:
-                raise ValueError(
-                    f"Task3 reference spec override modality must be within {sorted(self.VALID_MODALITIES)}, "
-                    f"got {modality!r} for {reference_id}"
-                )
-            normalized_overrides[str(reference_id)] = {
-                "detector": detector,
-                "detector_modalities": detector_modalities,
-                "modality": str(modality) if modality is not None else None,
-                "rationale": payload.get("rationale"),
-            }
+            normalized_overrides[reference_id] = payload
 
         return {
             "references": metadata_by_reference,
             "overrides": normalized_overrides,
             "auto_routing_enabled": True,
             "per_reference_suppression": per_reference_suppression,
+        }
+
+    def _normalize_override_payload(
+        self,
+        payload: Any,
+        reference_id: str,
+        *,
+        spec_path: Path,
+    ) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            raise ValueError(f"Task3 reference spec override malformed for {reference_id}: {spec_path}")
+        unexpected_keys = sorted(set(payload.keys()) - self.VALID_OVERRIDE_FIELDS)
+        if unexpected_keys:
+            raise ValueError(
+                f"Task3 reference spec override contains unsupported fields for {reference_id}: {unexpected_keys}"
+            )
+        if "detector" not in payload:
+            raise ValueError(f"Task3 reference spec override missing detector for {reference_id}: {spec_path}")
+        detector = self._validate_detector(str(payload["detector"]), reference_id)
+        modality = payload.get("modality")
+        if modality is not None and str(modality) not in self.VALID_MODALITIES:
+            raise ValueError(
+                f"Task3 reference spec override modality must be within {sorted(self.VALID_MODALITIES)}, "
+                f"got {modality!r} for {reference_id}"
+            )
+        detector_modalities = self._normalize_detector_modalities(payload.get("detector_modalities"), reference_id)
+        if detector_modalities is None and modality is not None and str(modality) in {"rgb", "thermal"}:
+            detector_modalities = [str(modality)]
+        return {
+            "detector": detector,
+            "detector_modalities": detector_modalities,
+            "modality": str(modality) if modality is not None else None,
+            "rationale": payload.get("rationale"),
         }
 
     def _validate_detector(self, detector: str, reference_id: str) -> str:

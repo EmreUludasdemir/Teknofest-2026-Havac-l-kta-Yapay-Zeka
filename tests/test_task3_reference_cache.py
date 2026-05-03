@@ -56,7 +56,7 @@ class Task3ReferenceCacheTests(unittest.TestCase):
             "ref_04": ("thermal", "yoloe", ["thermal"]),
             "ref_05": ("rgb", "yoloe", ["rgb"]),
             "ref_06": ("rgb", "yoloe", ["rgb"]),
-            "ref_07": ("unknown", "both", ["rgb", "thermal"]),
+            "ref_07": ("rgb", "orb", ["rgb"]),
             "ref_08": ("rgb", "yoloe", ["rgb"]),
             "ref_09": ("rgb", "yoloe", ["rgb"]),
             "ref_10": ("rgb", "yoloe", ["rgb"]),
@@ -69,7 +69,12 @@ class Task3ReferenceCacheTests(unittest.TestCase):
             self.assertEqual(item["reference_modality"], modality, reference_id)
             self.assertEqual(item["detector"], detector, reference_id)
             self.assertEqual(item["detector_modalities"], modalities, reference_id)
-        self.assertEqual(cache.get_overrides_applied(), [])
+        self.assertEqual(len(cache.get_overrides_applied()), 1)
+        self.assertEqual(cache.get_overrides_applied()[0]["reference_id"], "ref_07")
+        diagnostics = cache.get_routing_diagnostics()
+        self.assertEqual(diagnostics["ref_07"]["detector"], "orb")
+        self.assertEqual(diagnostics["ref_07"]["detector_modalities"], ["rgb"])
+        self.assertEqual(diagnostics["ref_07"]["override"]["modality"], "rgb")
 
     def test_manual_override_replaces_auto_assignment_and_logs_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

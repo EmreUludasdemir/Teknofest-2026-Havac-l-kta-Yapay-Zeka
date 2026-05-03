@@ -65,7 +65,12 @@
         210
       ],
       "modality": "unknown",
-      "source_exif": null
+      "source_exif": null,
+      "routing_override": {
+        "modality": "rgb",
+        "detector": "orb",
+        "rationale": "D6 forensic: cross-modality ORB false-match in thermal video"
+      }
     },
     "ref_08": {
       "file": "Referans_Nesne_08.png",
