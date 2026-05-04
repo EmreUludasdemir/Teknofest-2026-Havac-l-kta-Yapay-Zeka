@@ -48,14 +48,16 @@ class SchemaValidator:
             self._ensure_number(item["bottom_right_y"], "undefined.bottom_right_y")
 
     def validate_official_repo_prediction(self, payload: dict[str, Any]) -> None:
-        """Validate wire format per 2026 spec (includes Task 3 + motion_status)."""
-        self._require_keys(payload, ("frame", "detected_objects", "detected_translations", "detected_undefined_objects"))
+        """Validate official 2025 batch wire format."""
+        self._require_keys(payload, ("frame", "detected_objects", "detected_translations"))
+        unexpected = set(payload.keys()) - {"frame", "detected_objects", "detected_translations"}
+        if unexpected:
+            raise SchemaValidationError(f"Official batch wire beklenmeyen alanlar iceriyor: {sorted(unexpected)}")
         if not isinstance(payload["frame"], str):
             raise SchemaValidationError("Official frame alani string olmali.")
 
         self._ensure_list(payload["detected_objects"], "detected_objects")
         self._ensure_list(payload["detected_translations"], "detected_translations")
-        self._ensure_list(payload["detected_undefined_objects"], "detected_undefined_objects")
 
         for item in payload["detected_objects"]:
             self._require_keys(item, ("cls", "landing_status", "top_left_x", "top_left_y", "bottom_right_x", "bottom_right_y"))
@@ -64,24 +66,14 @@ class SchemaValidator:
             for key in ("landing_status", "top_left_x", "top_left_y", "bottom_right_x", "bottom_right_y"):
                 if not isinstance(item[key], str):
                     raise SchemaValidationError(f"Official {key} string olmali.")
-            # motion_status is optional but must be string if present (per 2026 spec for vehicles)
-            if "motion_status" in item and not isinstance(item["motion_status"], str):
-                raise SchemaValidationError("Official motion_status string olmali.")
+            if "motion_status" in item:
+                raise SchemaValidationError("Official batch wire 2025 motion_status icermemeli.")
 
         for item in payload["detected_translations"]:
             self._require_keys(item, ("translation_x", "translation_y", "translation_z"))
             for key in ("translation_x", "translation_y", "translation_z"):
                 if not isinstance(item[key], str):
                     raise SchemaValidationError(f"Official {key} string olmali.")
-
-        # Task 3: detected_undefined_objects per 2026 spec
-        for item in payload["detected_undefined_objects"]:
-            self._require_keys(item, ("object_id", "top_left_x", "top_left_y", "bottom_right_x", "bottom_right_y"))
-            if not isinstance(item["object_id"], str):
-                raise SchemaValidationError("Official undefined object_id string olmali.")
-            for key in ("top_left_x", "top_left_y", "bottom_right_x", "bottom_right_y"):
-                if not isinstance(item[key], str):
-                    raise SchemaValidationError(f"Official undefined {key} string olmali.")
 
     def validate_sequential_prediction(
         self,
@@ -102,9 +94,16 @@ class SchemaValidator:
                 "frame": payload["frame"],
                 "detected_objects": payload["detected_objects"],
                 "detected_translations": payload["detected_translations"],
-                "detected_undefined_objects": payload["detected_undefined_objects"],
             }
         )
+        self._ensure_list(payload["detected_undefined_objects"], "detected_undefined_objects")
+        for item in payload["detected_undefined_objects"]:
+            self._require_keys(item, ("object_id", "top_left_x", "top_left_y", "bottom_right_x", "bottom_right_y"))
+            if not isinstance(item["object_id"], str):
+                raise SchemaValidationError("Sequential undefined object_id string olmali.")
+            for key in ("top_left_x", "top_left_y", "bottom_right_x", "bottom_right_y"):
+                if not isinstance(item[key], str):
+                    raise SchemaValidationError(f"Sequential undefined {key} string olmali.")
 
     @staticmethod
     def _require_keys(payload: dict[str, Any], keys: tuple[str, ...]) -> None:

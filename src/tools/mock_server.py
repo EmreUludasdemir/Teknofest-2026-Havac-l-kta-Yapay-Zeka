@@ -130,6 +130,8 @@ class OfficialRepoMockServer:
         password: str = "password",
         session: MockSessionData | None = None,
         mode: str = "batch",
+        prediction_limit_per_minute: int = 80,
+        manifest_limit_per_minute: int = 5,
         sequential_warmup_delay_s: float = 0.0,
         next_frame_delay_s: float = 0.0,
         prediction_delay_s: float = 0.0,
@@ -143,6 +145,8 @@ class OfficialRepoMockServer:
             password=password,
             session=session or build_default_session(),
             mode=mode,
+            prediction_limit_per_minute=prediction_limit_per_minute,
+            manifest_limit_per_minute=manifest_limit_per_minute,
             sequential_warmup_delay_s=sequential_warmup_delay_s,
             next_frame_delay_s=next_frame_delay_s,
             prediction_delay_s=prediction_delay_s,
@@ -336,6 +340,23 @@ class OfficialRepoMockServer:
                         self._send_json(HTTPStatus.FORBIDDEN, {"detail": "You do not have permission to perform this action."})
                         return
                     payload = json.loads(raw_body.decode("utf-8") or "{}")
+                    if state.mode == "batch":
+                        required_keys = {"frame", "detected_objects", "detected_translations"}
+                        payload_keys = set(payload.keys())
+                        if payload_keys != required_keys:
+                            self._send_json(
+                                HTTPStatus.BAD_REQUEST,
+                                {
+                                    "detail": "Batch payload field mismatch",
+                                    "missing": sorted(required_keys - payload_keys),
+                                    "unexpected": sorted(payload_keys - required_keys),
+                                },
+                            )
+                            return
+                        for item in payload.get("detected_objects", []):
+                            if "motion_status" in item:
+                                self._send_json(HTTPStatus.BAD_REQUEST, {"detail": "motion_status not allowed in batch 2025 payload"})
+                                return
                     frame_url = payload.get("frame")
                     if frame_url in state.accepted_predictions:
                         self._send_json(HTTPStatus.NOT_ACCEPTABLE, {"detail": "Prediction already exists."})

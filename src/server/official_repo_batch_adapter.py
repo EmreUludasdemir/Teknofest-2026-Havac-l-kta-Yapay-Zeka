@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
 from time import perf_counter
+from time import sleep
+from time import time
 from typing import Any
 
 from src.config.settings import OfficialRepoSettings
@@ -19,6 +22,9 @@ class OfficialRepoBatchAdapter(ProtocolAdapter):
     client: SimpleHttpClient = field(default_factory=SimpleHttpClient)
     logger: StructuredLogger | None = None
     auth_token: str | None = None
+    _prediction_window: deque[float] = field(default_factory=deque, init=False, repr=False)
+    _time_fn: Any = field(default=time, init=False, repr=False)
+    _sleep_fn: Any = field(default=sleep, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.base_url = self.settings.normalized_base_url
@@ -220,21 +226,17 @@ class OfficialRepoBatchAdapter(ProtocolAdapter):
             "frame": result.frame_url,
             "detected_objects": [],
             "detected_translations": [],
-            "detected_undefined_objects": [],
         }
 
         for obj in result.detected_objects:
             wire_obj: dict[str, Any] = {
-                "cls": f"{self.base_url}classes/{int(obj.class_id) + 1}/",
+                "cls": self._build_cls_url(int(obj.class_id)),
                 "landing_status": str(obj.landing_status),
                 "top_left_x": str(obj.top_left_x),
                 "top_left_y": str(obj.top_left_y),
                 "bottom_right_x": str(obj.bottom_right_x),
                 "bottom_right_y": str(obj.bottom_right_y),
             }
-            # motion_status is only valid for vehicles (class_id=0) with 2026 spec values 0/1
-            if int(obj.class_id) == 0 and obj.motion_status in (0, 1):
-                wire_obj["motion_status"] = str(obj.motion_status)
             payload["detected_objects"].append(wire_obj)
 
         for translation in result.detected_translations:
@@ -246,23 +248,12 @@ class OfficialRepoBatchAdapter(ProtocolAdapter):
                 }
             )
 
-        # Task 3: detected_undefined_objects per 2026 spec
-        for uobj in result.detected_undefined_objects:
-            payload["detected_undefined_objects"].append(
-                {
-                    "object_id": str(uobj.object_id),
-                    "top_left_x": str(uobj.top_left_x),
-                    "top_left_y": str(uobj.top_left_y),
-                    "bottom_right_x": str(uobj.bottom_right_x),
-                    "bottom_right_y": str(uobj.bottom_right_y),
-                }
-            )
-
         return payload
 
     def send_wire_prediction(self, payload: dict[str, Any]) -> HttpResponse:
         if not self.auth_token:
             self.login()
+        self._throttle_prediction_send(frame_url=str(payload.get("frame") or ""))
         t0 = perf_counter()
         response = self.client.post_json(
             self.url_prediction,
@@ -296,3 +287,31 @@ class OfficialRepoBatchAdapter(ProtocolAdapter):
             )
 
         return response
+
+    def _build_cls_url(self, class_id: int) -> str:
+        return f"{self.base_url}classes/{int(class_id) + 1}/"
+
+    def _throttle_prediction_send(self, *, frame_url: str) -> None:
+        limit = max(int(self.settings.prediction_limit_per_minute), 0)
+        if limit <= 0:
+            return
+
+        now = float(self._time_fn())
+        while self._prediction_window and now - self._prediction_window[0] >= 60.0:
+            self._prediction_window.popleft()
+
+        if len(self._prediction_window) >= limit:
+            wait_seconds = max(60.0 - (now - self._prediction_window[0]), 0.0)
+            if wait_seconds > 0.0:
+                self.logger.log_runtime(
+                    event="prediction_rate_limit_wait",
+                    adapter=type(self).__name__,
+                    frame_url=frame_url or None,
+                    diagnostics={"wait_seconds": round(wait_seconds, 3), "limit_per_minute": limit},
+                )
+                self._sleep_fn(wait_seconds)
+                now = float(self._time_fn())
+                while self._prediction_window and now - self._prediction_window[0] >= 60.0:
+                    self._prediction_window.popleft()
+
+        self._prediction_window.append(float(self._time_fn()))
