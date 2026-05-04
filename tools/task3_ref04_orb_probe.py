@@ -17,7 +17,7 @@ import cv2
 
 from src.config.settings import MvpRuntimeSettings
 from src.core.frame_state import FrameEnvelope
-from src.evaluation.task2_long_sequence import iter_video_frames
+from src.core.video_io import iter_video_frames
 from src.evaluation.task3_manifest_eval import evaluate_task3_manifest, load_task3_manifest
 from src.task3.matcher import Task3Matcher
 from src.task3.no_match_logic import filter_no_match_candidates

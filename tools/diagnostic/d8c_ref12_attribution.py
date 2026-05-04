@@ -10,7 +10,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.core.vision import cv2, np
-from src.evaluation.task2_long_sequence import iter_video_frames
+from src.core.video_io import iter_video_frames
 from tools.diagnostic.d6_probe_common import REFERENCE_DIR, evaluate_frame, reference_aspect_ratio
 
 OUTPUT_DIR = (

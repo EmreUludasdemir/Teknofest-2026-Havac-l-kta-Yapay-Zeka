@@ -31,7 +31,7 @@ from typing import Any
 
 from src.config.settings import MvpRuntimeSettings
 from src.core.frame_state import CanonicalUndefinedObject, FrameEnvelope
-from src.evaluation.task2_long_sequence import iter_video_frames
+from src.core.video_io import iter_video_frames
 from src.task3.experimental.backend import (
     LightGlueCropVerifier,
     YoloeVpLightGlueBackend,

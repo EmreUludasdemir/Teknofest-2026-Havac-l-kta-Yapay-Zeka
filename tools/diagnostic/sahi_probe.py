@@ -34,7 +34,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.config.settings import MvpRuntimeSettings
 from src.core.frame_state import DecodedFrame
 from src.core.vision import cv2, is_cv2_available, np
-from src.evaluation.task2_long_sequence import iter_video_frames
+from src.core.video_io import iter_video_frames
 from src.task3.experimental.backend import (
     YoloeVpLightGlueBackend,
     _compute_homography_consistency,

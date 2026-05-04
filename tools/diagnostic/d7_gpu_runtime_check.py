@@ -14,7 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.config.settings import MvpRuntimeSettings
 from src.core.frame_state import FrameEnvelope
-from src.evaluation.task2_long_sequence import iter_video_frames
+from src.core.video_io import iter_video_frames
 from src.task3.matcher import Task3Matcher
 from src.task3.reference_cache import ReferenceCache
 from tools.diagnostic.d6_probe_common import build_temp_reference_bank, cleanup_temp_dir

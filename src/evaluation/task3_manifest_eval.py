@@ -7,7 +7,7 @@ from statistics import mean
 from typing import Any, Iterable
 
 from src.config.settings import MvpRuntimeSettings
-from src.evaluation.task2_long_sequence import iter_video_frames
+from src.core.video_io import iter_video_frames
 from src.evaluation.task3_baseline import evaluate_task3_frames
 from src.tools.report_paths import GENERATED_REPORTS_ROOT
 

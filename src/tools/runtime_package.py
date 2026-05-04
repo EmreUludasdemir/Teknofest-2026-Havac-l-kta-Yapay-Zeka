@@ -15,59 +15,28 @@ def prepare_runtime_package(
     base_dir: str | Path = "final_runtime",
     reports_dir: str | Path = EXPORT_REPORTS_DIR,
 ) -> dict[str, Any]:
+    del reports_dir
     base = Path(base_dir)
-    reports_base = Path(reports_dir)
     config_dir = base / "config"
-    artifacts_onnx_dir = base / "artifacts" / "onnx"
-    artifacts_trt_dir = base / "artifacts" / "trt"
+    artifacts_dir = base / "artifacts" / "task3"
     logs_dir = base / "logs"
     cache_dir = base / "cache"
-    for directory in (config_dir, artifacts_onnx_dir, artifacts_trt_dir, logs_dir, cache_dir):
+    for directory in (config_dir, artifacts_dir, logs_dir, cache_dir):
         directory.mkdir(parents=True, exist_ok=True)
 
-    validation_status = _collect_validation_statuses(reports_base)
-    copied_artifacts = {
-        "yolo26n_onnx": _copy_if_exists(
-            runtime_settings.resolve_task1_onnx_path("yolo26n") or reports_base / "models" / "yolo26n.onnx",
-            artifacts_onnx_dir / "yolo26n.onnx",
-        ),
-        "yolo11n_onnx": _copy_if_exists(
-            runtime_settings.resolve_task1_onnx_path("yolo11n") or reports_base / "models" / "yolo11n.onnx",
-            artifacts_onnx_dir / "yolo11n.onnx",
-        ),
-        "yolo26n_trt": _copy_if_exists(
-            runtime_settings.resolve_task1_trt_path("yolo26n") or reports_base / "models" / "yolo26n.engine",
-            artifacts_trt_dir / "yolo26n.engine",
-        ),
-    }
-    _copy_if_exists(
-        runtime_settings.resolve_task1_export_metadata_path("yolo26n"),
-        artifacts_onnx_dir / "yolo26n.metadata.json",
+    copied_weight = _copy_if_exists(
+        runtime_settings.task3_yoloe_weight_path,
+        artifacts_dir / Path(runtime_settings.task3_yoloe_weight_path).name,
     )
-    _copy_if_exists(
-        runtime_settings.resolve_task1_export_metadata_path("yolo11n"),
-        artifacts_onnx_dir / "yolo11n.metadata.json",
-    )
-    _copy_if_exists(
-        runtime_settings.resolve_task1_trt_metadata_path("yolo26n"),
-        artifacts_trt_dir / "yolo26n.engine.metadata.json",
-    )
-
-    manifest = _build_model_manifest(
+    manifest = _build_runtime_manifest(
         runtime_settings=runtime_settings,
-        copied_artifacts=copied_artifacts,
-        validation_status=validation_status,
+        copied_weight=copied_weight,
     )
-    manifest_path = config_dir / "model_manifest.json"
+    manifest_path = config_dir / "task3_runtime_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
-    runtime_toml = _render_runtime_toml(
-        runtime_settings=runtime_settings,
-        manifest=manifest,
-        base_dir=base,
-    )
     runtime_toml_path = config_dir / "runtime.toml"
-    runtime_toml_path.write_text(runtime_toml, encoding="utf-8")
+    runtime_toml_path.write_text(_render_runtime_toml(runtime_settings, manifest_path, base), encoding="utf-8")
 
     readme_path = base / "README.md"
     readme_path.write_text(_render_runtime_readme(), encoding="utf-8")
@@ -79,132 +48,63 @@ def prepare_runtime_package(
     }
 
 
-def _collect_validation_statuses(reports_base: Path) -> dict[str, bool]:
-    statuses = {
-        "onnxruntime:yolo26n": _read_validation_flag(reports_base / "task1_yolo26n_onnx_export_summary.json"),
-        "onnxruntime:yolo11n": _read_validation_flag(reports_base / "task1_yolo11n_onnx_export_summary.json"),
-        "tensorrt:yolo26n": _read_validation_flag(reports_base / "task1_trt_export_summary.json"),
-    }
-    return statuses
-
-
-def _build_model_manifest(
+def _build_runtime_manifest(
     *,
     runtime_settings: MvpRuntimeSettings,
-    copied_artifacts: dict[str, str | None],
-    validation_status: dict[str, bool],
+    copied_weight: str | None,
 ) -> dict[str, Any]:
-    required = [
-        _artifact_entry(
-            artifact_id="yolo26n.pt",
-            path=_string_or_none(runtime_settings.resolve_task1_model_path("yolo26n")),
-            candidate="yolo26n",
-            runtime="ultralytics",
-            required=True,
-            validation_status=True,
-        ),
-        _artifact_entry(
-            artifact_id="yolo26n.onnx",
-            path=copied_artifacts.get("yolo26n_onnx"),
-            candidate="yolo26n",
-            runtime="onnxruntime",
-            required=True,
-            validation_status=validation_status.get("onnxruntime:yolo26n", False),
-        ),
-    ]
-    optional = [
-        _artifact_entry(
-            artifact_id="yolo26n.engine",
-            path=copied_artifacts.get("yolo26n_trt"),
-            candidate="yolo26n",
-            runtime="tensorrt",
-            required=False,
-            validation_status=validation_status.get("tensorrt:yolo26n", False),
-        ),
-        _artifact_entry(
-            artifact_id="yolo11n.pt",
-            path=_string_or_none(runtime_settings.resolve_task1_model_path("yolo11n")),
-            candidate="yolo11n",
-            runtime="ultralytics",
-            required=False,
-            validation_status=True,
-        ),
-        _artifact_entry(
-            artifact_id="yolo11n.onnx",
-            path=copied_artifacts.get("yolo11n_onnx"),
-            candidate="yolo11n",
-            runtime="onnxruntime",
-            required=False,
-            validation_status=validation_status.get("onnxruntime:yolo11n", False),
-        ),
-    ]
     return {
-        "required": required,
-        "optional": optional,
-        "runtime_order": list(runtime_settings.task1_runtime_order),
+        "task": "task3",
+        "required": [
+            {
+                "artifact_id": Path(runtime_settings.task3_yoloe_weight_path).name,
+                "path": copied_weight,
+                "runtime": "ultralytics",
+                "required": True,
+                "validation_status": copied_weight is not None,
+            }
+        ],
+        "references": {
+            "reference_dir": str(runtime_settings.task3_reference_dir),
+            "eval_reference_dir": str(runtime_settings.task3_eval_reference_dir),
+            "eval_manifest_path": str(runtime_settings.task3_eval_manifest_path),
+        },
     }
 
 
-def _artifact_entry(
-    *,
-    artifact_id: str,
-    path: str | None,
-    candidate: str,
-    runtime: str,
-    required: bool,
-    validation_status: bool,
-) -> dict[str, Any]:
-    return {
-        "artifact_id": artifact_id,
-        "path": path,
-        "candidate": candidate,
-        "runtime": runtime,
-        "required": required,
-        "validation_status": validation_status,
-    }
-
-
-def _render_runtime_toml(
-    *,
-    runtime_settings: MvpRuntimeSettings,
-    manifest: dict[str, Any],
-    base_dir: Path,
-) -> str:
-    default_runtime = "tensorrt" if _manifest_entry_valid(manifest, "yolo26n.engine") else "onnxruntime"
+def _render_runtime_toml(runtime_settings: MvpRuntimeSettings, manifest_path: Path, base_dir: Path) -> str:
     lines = [
-        "[task1]",
-        'detector_backend = "yolo26n"',
-        f'model_runtime = "{default_runtime}"',
-        f'task1_device = "{runtime_settings.task1_device or "cuda:0"}"',
-        f'trt_precision = "{runtime_settings.task1_trt_precision}"',
-        f'trt_warmup_runs = {int(runtime_settings.task1_trt_warmup_runs)}',
-        f'onnx_conf_threshold_offset = {float(runtime_settings.task1_onnx_conf_threshold_offset)}',
-        "runtime_order = [",
+        "[task3]",
+        f'mode = "{runtime_settings.task3_mode}"',
+        f'reference_dir = "{Path(runtime_settings.task3_reference_dir).as_posix()}"',
+        f'eval_reference_dir = "{Path(runtime_settings.task3_eval_reference_dir).as_posix()}"',
+        f'eval_manifest_path = "{Path(runtime_settings.task3_eval_manifest_path).as_posix()}"',
+        f'yoloe_weight_path = "{Path(runtime_settings.task3_yoloe_weight_path).as_posix()}"',
+        f'yoloe_device = "{runtime_settings.task3_yoloe_device or "auto"}"',
+        f"yoloe_allow_cpu = {str(bool(runtime_settings.task3_yoloe_allow_cpu)).lower()}",
+        f"orb_features = {int(runtime_settings.task3_orb_features)}",
+        f"match_min_inliers = {int(runtime_settings.task3_match_min_inliers)}",
+        f"min_score = {float(runtime_settings.task3_min_score)}",
+        f"yoloe_min_score = {float(runtime_settings.task3_yoloe_min_score)}",
+        f"yoloe_thermal_min_score = {float(runtime_settings.task3_yoloe_thermal_min_score)}",
+        "",
+        "[paths]",
+        f'log_dir = "{(base_dir / "logs").as_posix()}"',
+        f'cache_dir = "{(base_dir / "cache").as_posix()}"',
+        f'manifest_path = "{manifest_path.as_posix()}"',
+        "",
+        "[smoke]",
+        'default_mode = "batch"',
+        "default_max_frames = 2",
     ]
-    for item in runtime_settings.task1_runtime_order:
-        lines.append(f'  "{item}",')
-    lines.extend(
-        [
-            "]",
-            "",
-            "[paths]",
-            f'log_dir = "{(base_dir / "logs").as_posix()}"',
-            f'cache_dir = "{(base_dir / "cache").as_posix()}"',
-            f'manifest_path = "{(base_dir / "config" / "model_manifest.json").as_posix()}"',
-            "",
-            "[smoke]",
-            'default_mode = "batch"',
-            "default_max_frames = 2",
-        ]
-    )
     return "\n".join(lines) + "\n"
 
 
 def _render_runtime_readme() -> str:
     return (
         "# Final Runtime\n\n"
-        "Bu klasor Faz 8 itibariyla yarismaya yakin runtime artefact ve config duzenini toplar.\n"
-        "Model manifesti zorunlu/opsiyonel artefact listesini, runtime.toml ise smoke ayarlarini icerir.\n"
+        "Bu klasor Task 3 batch/sequential adapter smoke calismalari icin gerekli runtime artefact ve config duzenini toplar.\n"
+        "Task 1 ve Task 2 artefactlari bu repodan cikarilmistir.\n"
     )
 
 
@@ -217,25 +117,3 @@ def _copy_if_exists(source: str | Path | None, destination: Path) -> str | None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source_path, destination)
     return str(destination)
-
-
-def _read_validation_flag(path: Path) -> bool:
-    if not path.exists():
-        return False
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return False
-    return bool(payload.get("validation_passed"))
-
-
-def _manifest_entry_valid(manifest: dict[str, Any], artifact_id: str) -> bool:
-    for section in ("required", "optional"):
-        for item in manifest.get(section, []):
-            if item.get("artifact_id") == artifact_id:
-                return bool(item.get("validation_status")) and bool(item.get("path"))
-    return False
-
-
-def _string_or_none(path: Path | None) -> str | None:
-    return str(path) if path is not None else None

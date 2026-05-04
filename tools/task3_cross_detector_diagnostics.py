@@ -13,7 +13,7 @@ from typing import Any
 
 from src.config.settings import MvpRuntimeSettings
 from src.core.frame_state import CanonicalUndefinedObject, FrameEnvelope
-from src.evaluation.task2_long_sequence import iter_video_frames
+from src.core.video_io import iter_video_frames
 from src.evaluation.task3_manifest_eval import load_task3_manifest
 from src.task3.experimental.backend import YoloeVpLightGlueBackend
 from src.task3.matcher import Task3Matcher
