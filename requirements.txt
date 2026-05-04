@@ -1,7 +1,6 @@
-# TEKNOFEST Faz 2.5 minimum bagimlilik notu
-# Hedef runtime: Python 3.10.x
-# Faz 5 itibariyla hafif CV baseline ve Task 1 gercek local-model profiling destegi eklenmistir.
-# Agir egitim, TRT export ve buyuk model runtime bagimliliklari ayri fazlarda eklenecektir.
+# TEKNOFEST Task 3 minimum bagimliliklari
+# Hedef runtime: Python 3.12.x
+# GPU runtime torch kurulumu ayri yapilir; bkz. SETUP.md
 opencv-python-headless>=4.10,<5
 ultralytics>=8.4,<9
 timm>=1.0,<2
