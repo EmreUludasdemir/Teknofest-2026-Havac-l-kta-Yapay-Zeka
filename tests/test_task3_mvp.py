@@ -73,6 +73,8 @@ class Task3MvpTests(unittest.TestCase):
             result = FrameResult(frame_url=self._frame(1).frame_url, detected_undefined_objects=filtered)
             payload = adapter.build_wire_prediction(result)
             self.assertNotIn("detected_undefined_objects", payload)
+            self.assertEqual(payload["detected_objects"], [])
+            self.assertEqual(payload["detected_translations"], [])
 
 
 if __name__ == "__main__":

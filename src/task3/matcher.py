@@ -6,7 +6,7 @@ from typing import Any
 
 from src.config.settings import MvpRuntimeSettings
 from src.core.frame_state import CanonicalUndefinedObject, DecodedFrame, FrameEnvelope
-from src.core.utils import extract_frame_index
+from src.core.utils import extract_frame_index, infer_modality
 from src.core.vision import is_cv2_available
 from src.task3.reference_cache import ReferenceCache
 
@@ -22,6 +22,16 @@ try:  # pragma: no branch - ortama bagli
 except Exception:  # pragma: no cover - bagimli
     timm = None
     torch = None
+
+KNOWN_FALLBACK_REASONS = {
+    "missing_yoloe_weight",
+    "missing_lightglue",
+    "cuda_required_but_unavailable",
+    "backend_exception",
+    "missing_decoded_frame",
+    "missing_bgr_frame",
+    "reference_bank_not_ready",
+}
 
 
 @dataclass(slots=True)
@@ -81,11 +91,13 @@ class LearnedDescriptorEmbedder:
 
 @dataclass(slots=True)
 class Task3Matcher:
-    """Descriptor tabanli baseline; learned rerank yolu opsiyoneldir."""
+    """Descriptor tabanli baseline; learned ve YOLOE yollari opsiyoneldir."""
 
     reference_cache: ReferenceCache
     runtime_settings: MvpRuntimeSettings
     learned_embedder: LearnedDescriptorEmbedder | None = field(default=None)
+    experimental_backend: Any | None = field(default=None, init=False, repr=False)
+    last_run_info: dict[str, Any] = field(default_factory=dict, init=False)
 
     def match(
         self,
@@ -94,25 +106,205 @@ class Task3Matcher:
         reference_ids: list[str] | None = None,
         *,
         decoded_frame: DecodedFrame | None = None,
-        mode: str = "orb_template",
+        mode: str | None = None,
     ) -> list[CanonicalUndefinedObject]:
+        requested_mode = mode or self.runtime_settings.task3_mode
         available_ids = reference_ids or self.reference_cache.list_ids()
+        self.last_run_info = self._empty_task3_info(requested_mode=requested_mode, references_loaded=len(available_ids))
+
         if not available_ids:
+            self.last_run_info["effective_mode"] = "none"
             return []
 
+        if requested_mode == "yoloe_vp_lightglue":
+            current_modality = decoded_frame.modality if decoded_frame is not None else infer_modality(frame.video_name)
+            active_ids = self.reference_cache.filter_reference_ids_by_detector_modality(available_ids, modality=current_modality)
+            if not active_ids:
+                self.last_run_info["effective_mode"] = "none"
+                return []
+            yoloe_ids, orb_ids = self.reference_cache.split_reference_ids_by_detector(active_ids)
+            self.last_run_info["yoloe_routed_refs"] = list(yoloe_ids)
+            self.last_run_info["orb_routed_refs"] = list(orb_ids)
+            if orb_ids:
+                routed_matches = self._match_with_per_reference_routing(
+                    frame,
+                    decoded_frame,
+                    yoloe_reference_ids=yoloe_ids,
+                    orb_reference_ids=orb_ids,
+                )
+                self._finalize_info(routed_matches, effective_mode="per_reference_routing")
+                return routed_matches
+            try:
+                matches = self._match_with_yoloe_vp_lightglue(decoded_frame, active_ids, scenario_id=frame.video_name)
+                self._finalize_info(matches, effective_mode="yoloe_vp_lightglue")
+                return matches
+            except Exception as exc:
+                reason = str(exc)
+                self.last_run_info["fallback_reason"] = reason if reason in KNOWN_FALLBACK_REASONS else "backend_exception"
+
         if is_cv2_available() and decoded_frame is not None and decoded_frame.gray is not None:
-            if mode == "learned_descriptor":
+            if requested_mode == "learned_descriptor":
                 learned_matches = self._match_with_learned_descriptor(decoded_frame, available_ids)
                 if learned_matches:
+                    self._finalize_info(learned_matches, effective_mode="learned_descriptor")
                     return learned_matches
             matched = self._match_with_descriptors(decoded_frame, available_ids)
             if matched:
+                self._finalize_info(matched, effective_mode="orb_template")
                 return matched
             matched = self._match_with_template(decoded_frame, available_ids)
             if matched:
+                self._finalize_info(matched, effective_mode="orb_template")
                 return matched
 
-        return self._placeholder_match(frame, available_ids)
+        placeholder = self._placeholder_match(frame, available_ids)
+        self._finalize_info(placeholder, effective_mode="placeholder")
+        return placeholder
+
+    def _empty_task3_info(self, *, requested_mode: str, references_loaded: int) -> dict[str, Any]:
+        return {
+            "requested_mode": requested_mode,
+            "effective_mode": requested_mode if requested_mode != "yoloe_vp_lightglue" else "orb_template",
+            "fallback_reason": None,
+            "references_loaded": references_loaded,
+            "auto_routing": self.reference_cache.get_auto_routing_summary(),
+            "overrides_applied": self.reference_cache.get_overrides_applied(),
+            "yoloe_routed_refs": [],
+            "orb_routed_refs": [],
+            "yoloe_candidates_total": 0,
+            "orb_candidates_total": 0,
+            "orb_placeholder_candidates": 0,
+            "yoloe_inference_ms": 0.0,
+            "lightglue_verify_ms_total": 0.0,
+            "homography_compute_ms_total": 0.0,
+            "candidates_generated": 0,
+            "candidates_accepted": 0,
+            "candidates_rejected": 0,
+            "candidates_rejected_by_gate": 0,
+        }
+
+    def _finalize_info(self, matches: list[CanonicalUndefinedObject], *, effective_mode: str) -> None:
+        self.last_run_info["effective_mode"] = effective_mode
+        if not self.last_run_info.get("candidates_generated"):
+            self.last_run_info["candidates_generated"] = len(matches)
+        if not self.last_run_info.get("candidates_accepted"):
+            self.last_run_info["candidates_accepted"] = len(matches)
+
+    def _match_with_yoloe_vp_lightglue(
+        self,
+        decoded_frame: DecodedFrame | None,
+        reference_ids: list[str],
+        *,
+        scenario_id: str | None = None,
+    ) -> list[CanonicalUndefinedObject]:
+        if decoded_frame is None or decoded_frame.bgr is None:
+            raise RuntimeError("missing_decoded_frame")
+
+        try:
+            from src.task3.experimental.backend import (
+                Task3ExperimentalUnavailableError,
+                YoloeVpLightGlueBackend,
+            )
+        except Exception:
+            raise RuntimeError("backend_exception")
+
+        if self.experimental_backend is None:
+            self.experimental_backend = YoloeVpLightGlueBackend(
+                reference_cache=self.reference_cache,
+                runtime_settings=self.runtime_settings,
+            )
+        try:
+            matches, task3_info = self.experimental_backend.match(
+                decoded_frame=decoded_frame,
+                reference_ids=reference_ids,
+                scenario_id=scenario_id,
+            )
+        except Task3ExperimentalUnavailableError as exc:
+            raise RuntimeError(exc.reason) from exc
+        self.last_run_info.update(task3_info)
+        return matches
+
+    def _match_with_per_reference_routing(
+        self,
+        frame: FrameEnvelope,
+        decoded_frame: DecodedFrame | None,
+        *,
+        yoloe_reference_ids: list[str],
+        orb_reference_ids: list[str],
+    ) -> list[CanonicalUndefinedObject]:
+        requested_mode = "yoloe_vp_lightglue"
+        routing_info = self._empty_task3_info(
+            requested_mode=requested_mode,
+            references_loaded=len(yoloe_reference_ids) + len(orb_reference_ids),
+        )
+        routing_info["effective_mode"] = "per_reference_routing"
+        routing_info["yoloe_routed_refs"] = list(yoloe_reference_ids)
+        routing_info["orb_routed_refs"] = list(orb_reference_ids)
+
+        merged: list[CanonicalUndefinedObject] = []
+        yoloe_candidate_count = 0
+        orb_candidate_count = 0
+        total_generated = 0
+        total_gate_rejected = 0
+        fallback_reasons: list[str] = []
+
+        if yoloe_reference_ids:
+            try:
+                yoloe_matches = self._match_with_yoloe_vp_lightglue(
+                    decoded_frame,
+                    yoloe_reference_ids,
+                    scenario_id=frame.video_name,
+                )
+                yoloe_info = dict(self.last_run_info)
+                merged.extend(yoloe_matches)
+                yoloe_candidate_count += len(yoloe_matches)
+                total_generated += int(yoloe_info.get("candidates_generated", len(yoloe_matches)))
+                total_gate_rejected += int(yoloe_info.get("candidates_rejected_by_gate", 0))
+                routing_info["yoloe_inference_ms"] += float(yoloe_info.get("yoloe_inference_ms", 0.0))
+                routing_info["lightglue_verify_ms_total"] += float(yoloe_info.get("lightglue_verify_ms_total", 0.0))
+                routing_info["homography_compute_ms_total"] += float(yoloe_info.get("homography_compute_ms_total", 0.0))
+            except Exception as exc:
+                reason = str(exc)
+                fallback_reasons.append(reason if reason in KNOWN_FALLBACK_REASONS else "backend_exception")
+                fallback_matches = self._match_with_real_orb_only(decoded_frame, yoloe_reference_ids)
+                merged.extend(fallback_matches)
+                orb_candidate_count += len(fallback_matches)
+                total_generated += len(fallback_matches)
+
+        if orb_reference_ids:
+            orb_matches = self._match_with_real_orb_only(decoded_frame, orb_reference_ids)
+            merged.extend(orb_matches)
+            orb_candidate_count += len(orb_matches)
+            total_generated += len(orb_matches)
+
+        routing_info["fallback_reason"] = None if not fallback_reasons else ("mixed" if len(set(fallback_reasons)) > 1 else fallback_reasons[0])
+        routing_info["yoloe_candidates_total"] = yoloe_candidate_count
+        routing_info["orb_candidates_total"] = orb_candidate_count
+        routing_info["orb_placeholder_candidates"] = 0
+        routing_info["yoloe_inference_ms"] = round(float(routing_info["yoloe_inference_ms"]), 4)
+        routing_info["lightglue_verify_ms_total"] = round(float(routing_info["lightglue_verify_ms_total"]), 4)
+        routing_info["homography_compute_ms_total"] = round(float(routing_info["homography_compute_ms_total"]), 4)
+        routing_info["candidates_generated"] = total_generated
+        routing_info["candidates_rejected_by_gate"] = total_gate_rejected
+        routing_info["candidates_accepted"] = len(merged)
+        routing_info["candidates_rejected"] = max(total_generated - len(merged), 0)
+        self.last_run_info = routing_info
+        return sorted(merged, key=lambda item: float(item.metadata.get("match_score", 0.0)), reverse=True)
+
+    def _match_with_real_orb_only(
+        self,
+        decoded_frame: DecodedFrame | None,
+        reference_ids: list[str],
+    ) -> list[CanonicalUndefinedObject]:
+        if not reference_ids or not is_cv2_available() or decoded_frame is None or decoded_frame.gray is None:
+            return []
+        matched = self._match_with_descriptors(decoded_frame, reference_ids)
+        if matched:
+            return [item for item in matched if not str(item.metadata.get("matcher_source", "")).startswith("task3_placeholder")]
+        matched = self._match_with_template(decoded_frame, reference_ids)
+        if matched:
+            return [item for item in matched if not str(item.metadata.get("matcher_source", "")).startswith("task3_placeholder")]
+        return []
 
     def _collect_proposals(
         self,

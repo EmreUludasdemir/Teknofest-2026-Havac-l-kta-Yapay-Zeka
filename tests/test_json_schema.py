@@ -10,7 +10,7 @@ from src.server.official_repo_batch_adapter import OfficialRepoBatchAdapter
 
 
 class JsonSchemaTests(unittest.TestCase):
-    def test_canonical_model_keeps_task3_but_official_wire_omits_it(self) -> None:
+    def test_batch_wire_keeps_task3_only_in_canonical_payload(self) -> None:
         frame = FrameEnvelope(
             frame_url="http://mock/frames/1/",
             image_url="/mock/frame_000000.jpg",
@@ -21,17 +21,32 @@ class JsonSchemaTests(unittest.TestCase):
             health_status="1",
         )
         result = build_protocol_placeholder_result(frame)
+
+        # Vehicle with motion_status
         result.detected_objects.append(
             CanonicalDetection(
-                class_id=2,
-                landing_status=1,
-                motion_status=-1,
+                class_id=0,  # Vehicle
+                landing_status=-1,
+                motion_status=1,  # Moving
                 top_left_x=10.0,
                 top_left_y=10.0,
                 bottom_right_x=20.0,
                 bottom_right_y=20.0,
             )
         )
+        # UAP area with landing_status
+        result.detected_objects.append(
+            CanonicalDetection(
+                class_id=2,  # UAP
+                landing_status=1,
+                motion_status=None,
+                top_left_x=30.0,
+                top_left_y=30.0,
+                bottom_right_x=50.0,
+                bottom_right_y=50.0,
+            )
+        )
+        # Task 3 undefined object
         result.detected_undefined_objects.append(
             CanonicalUndefinedObject(
                 object_id="ref-001",
@@ -54,8 +69,12 @@ class JsonSchemaTests(unittest.TestCase):
             )
         )
         wire_payload = adapter.build_wire_prediction(result)
+
+        vehicle_obj = wire_payload["detected_objects"][0]
+        self.assertNotIn("motion_status", vehicle_obj)
         self.assertNotIn("detected_undefined_objects", wire_payload)
-        self.assertNotIn("motion_status", wire_payload["detected_objects"][0])
+        self.assertEqual(len(wire_payload["detected_translations"]), 1)
+
         validator.validate_official_repo_prediction(wire_payload)
 
 

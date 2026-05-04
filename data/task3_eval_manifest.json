@@ -1,0 +1,147 @@
+{
+  "scenarios": [
+    {
+      "name": "rgb_reference_session",
+      "id": "rgb_reference_session",
+      "video": "data/THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001/THYZ_2026_Ornek_Veri_Seti/THYZ_2026_Ornek_Veri_1.MP4",
+      "references_dir": "data/references/2026_baseline",
+      "reference_mode": "present_targets",
+      "frame_stride": 90,
+      "frame_limit": 18,
+      "ground_truth": null,
+      "expected_present_refs": [
+        "ref_01",
+        "ref_02",
+        "ref_03",
+        "ref_04",
+        "ref_05",
+        "ref_06"
+      ],
+      "tags": [
+        "scale",
+        "angle",
+        "small_object",
+        "camera_motion"
+      ]
+    },
+    {
+      "name": "thermal_cross_sensor_proxy",
+      "id": "thermal_cross_sensor_proxy",
+      "video": "data/THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001/THYZ_2026_Ornek_Veri_Seti/THYZ_2026_Ornek_Veri_2_Termal.MP4",
+      "references_dir": "data/references/2026_baseline",
+      "reference_mode": "present_targets",
+      "frame_stride": 90,
+      "frame_limit": 16,
+      "ground_truth": null,
+      "expected_present_refs": [
+        "ref_04",
+        "ref_12"
+      ],
+      "tags": [
+        "thermal",
+        "cross_sensor",
+        "degraded",
+        "occlusion"
+      ]
+    },
+    {
+      "name": "rgb_absent_target_proxy_2025",
+      "id": "rgb_absent_target_proxy_2025",
+      "video": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-1-RGB.MP4",
+      "references_dir": "data/references/2026_baseline",
+      "reference_mode": "synthetic_absent",
+      "frame_stride": 120,
+      "frame_limit": 12,
+      "ground_truth": null,
+      "expected_present_refs": [],
+      "tags": [
+        "absent_target",
+        "camera_motion",
+        "clutter"
+      ]
+    },
+    {
+      "name": "thermal_absent_target_proxy_2025",
+      "id": "thermal_absent_target_proxy_2025",
+      "video": "data/HYZ_2025_Ornek_Veriler-001/Ornek-Veri-2-Termal.MP4",
+      "references_dir": "data/references/2026_baseline",
+      "reference_mode": "synthetic_absent",
+      "frame_stride": 120,
+      "frame_limit": 12,
+      "ground_truth": null,
+      "expected_present_refs": [],
+      "tags": [
+        "absent_target",
+        "thermal",
+        "degraded"
+      ]
+    },
+    {
+      "name": "mixed_bank_rgb_video",
+      "id": "mixed_bank_rgb_video",
+      "video": "data/THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001/THYZ_2026_Ornek_Veri_Seti/THYZ_2026_Ornek_Veri_1.MP4",
+      "references_dir": "data/references/2026_baseline",
+      "reference_mode": "present_targets",
+      "frame_stride": 90,
+      "frame_limit": 18,
+      "ground_truth": null,
+      "expected_present_refs": [
+        "ref_01",
+        "ref_02",
+        "ref_03",
+        "ref_05",
+        "ref_06",
+        "ref_07",
+        "ref_08",
+        "ref_09",
+        "ref_10"
+      ],
+      "modality_routing_breach_refs": [
+        "ref_04",
+        "ref_12"
+      ],
+      "ambiguous_routing_refs": [
+        "ref_07",
+        "ref_11"
+      ],
+      "tags": [
+        "rgb_video",
+        "mixed_bank",
+        "modality_routing_test"
+      ]
+    },
+    {
+      "name": "mixed_bank_thermal_video",
+      "id": "mixed_bank_thermal_video",
+      "video": "data/THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001/THYZ_2026_Ornek_Veri_Seti/THYZ_2026_Ornek_Veri_2_Termal.MP4",
+      "references_dir": "data/references/2026_baseline",
+      "reference_mode": "mixed",
+      "frame_stride": 90,
+      "frame_limit": 16,
+      "ground_truth": null,
+      "expected_present_refs": [
+        "ref_04",
+        "ref_12"
+      ],
+      "modality_routing_breach_refs": [
+        "ref_01",
+        "ref_02",
+        "ref_03",
+        "ref_05",
+        "ref_06",
+        "ref_08",
+        "ref_09",
+        "ref_10"
+      ],
+      "ambiguous_routing_refs": [
+        "ref_07",
+        "ref_11"
+      ],
+      "tags": [
+        "thermal_video",
+        "mixed_bank",
+        "modality_routing_test"
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import math
 from pathlib import Path
 from typing import Any
 
@@ -13,17 +14,25 @@ def _default_reference_dir() -> Path:
     return _project_root() / "data" / "THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001" / "THYZ_2026_Ornek_Veri_Seti" / "THYZ_2026_Ornek_Veri_1_Referans_Nesneler"
 
 
-def _default_calibration_path() -> Path:
-    return _project_root() / "data" / "THYZ_2026_Ornek_Veri_Seti-20260403T083511Z-3-001" / "THYZ_2026_Ornek_Veri_Seti" / "Kamera_Kalibrasyon_Parametreleri_2026.txt"
+def _default_task3_eval_reference_dir() -> Path:
+    return _project_root() / "data" / "references" / "2026_baseline"
 
 
-def _default_task1_export_dir() -> Path:
-    return _project_root() / "reports" / "export" / "models"
+def _default_task3_eval_manifest_path() -> Path:
+    return _project_root() / "data" / "task3_eval_manifest.json"
+
+
+def _default_task3_yoloe_weight_path() -> Path:
+    return _project_root() / "data" / "weights" / "task3" / "yoloe-11m-seg.pt"
+
+
+def _default_task3_debug_dump_dir() -> Path:
+    return _project_root() / "_logs" / "debug" / "task3_rejects"
 
 
 @dataclass(slots=True)
 class OfficialRepoSettings:
-    """Resmi repo uyumlu adapter ayarlari."""
+    """Resmi repo uyumlu batch adapter ayarlari."""
 
     base_url: str
     username: str
@@ -88,69 +97,13 @@ class SequentialProtocolSettings:
 
 @dataclass(slots=True)
 class MvpRuntimeSettings:
-    """Faz 5'e kadar genisletilen runtime davranis ayarlari."""
+    """Task 3 odakli runtime davranis ayarlari."""
 
     max_objects_per_frame: int = 16
-    task1_detector_backend: str = "synthetic"
-    task1_model_path: Path | None = None
-    task1_model_runtime: str = "ultralytics"
-    task1_model_fallback_candidate: str = "yolo11n"
-    task1_model_input_size: int = 640
-    task1_conf_threshold: float = 0.25
-    task1_iou_threshold: float = 0.45
-    task1_device: str | None = None
-    task1_env_name: str = "cpu"
-    task1_candidate_paths: dict[str, str] = field(default_factory=dict)
-    task1_onnx_path: Path | None = None
-    task1_onnx_candidate_paths: dict[str, str] = field(default_factory=dict)
-    task1_onnx_providers: list[str] = field(
-        default_factory=lambda: ["CUDAExecutionProvider", "CPUExecutionProvider"]
-    )
-    task1_onnx_conf_threshold_offset: float = 0.10
-    task1_trt_path: Path | None = None
-    task1_trt_candidate_paths: dict[str, str] = field(default_factory=dict)
-    task1_trt_precision: str = "fp16"
-    task1_trt_fallback_precision: str = "fp32"
-    task1_trt_workspace_mb: int = 1024
-    task1_trt_warmup_runs: int = 3
-    task1_trt_max_vram_mb: float = 6500.0
-    task1_trt_input_shape: tuple[int, int, int, int] = (1, 3, 640, 640)
-    task1_runtime_order: list[str] = field(
-        default_factory=lambda: [
-            "tensorrt:yolo26n",
-            "onnxruntime:yolo26n",
-            "ultralytics:yolo26n",
-            "onnxruntime:yolo11n",
-            "ultralytics:yolo11n",
-            "synthetic",
-        ]
-    )
-    task1_export_dir: Path = field(default_factory=_default_task1_export_dir)
-    task1_export_opset: int = 17
-    task1_export_dynamic: bool = False
-    task1_export_half: bool = False
-    task1_motion_threshold_px: float = 8.0
-    task1_landing_margin_px: float = 12.0
-    task2_calibration_path: Path = field(default_factory=_default_calibration_path)
-    task2_phase_response_min: float = 0.15
-    task2_phase_primary_response_min: float = 0.35
-    task2_flow_min_points: int = 4
-    task2_flow_primary_points: int = 12
-    task2_confidence_floor: float = 0.30
-    task2_long_drift_limit: float = 4.0
-    task2_max_step_xy: float = 5.0
-    task2_max_step_z: float = 2.0
-    task2_anchor_refresh_interval: int = 8
-    task2_anchor_refresh_confidence: float = 0.70
-    task2_velocity_decay: float = 0.35
-    task2_z_update_scale: float = 0.08
-    task2_hold_mode_velocity_weight: float = 0.10
-    task2_anchor_distance_limit_xy: float = 10.0
-    task2_anchor_distance_limit_z: float = 4.0
-    task2_eval_frame_stride: int = 4
-    task2_eval_sequence_limit: int | None = None
+    task3_mode: str = "orb_template"
     task3_reference_dir: Path = field(default_factory=_default_reference_dir)
-    task3_eval_reference_dir: Path = field(default_factory=_default_reference_dir)
+    task3_eval_reference_dir: Path = field(default_factory=_default_task3_eval_reference_dir)
+    task3_eval_manifest_path: Path = field(default_factory=_default_task3_eval_manifest_path)
     task3_eval_frame_stride: int = 60
     task3_eval_frame_limit: int | None = 120
     task3_orb_features: int = 256
@@ -164,35 +117,42 @@ class MvpRuntimeSettings:
     task3_learned_pretrained: bool = True
     task3_min_score: float = 0.70
     task3_ambiguity_margin: float = 0.05
+    task3_yoloe_weight_path: Path = field(default_factory=_default_task3_yoloe_weight_path)
+    task3_yoloe_device: str | None = None
+    task3_yoloe_allow_cpu: bool = False
+    task3_yoloe_conf: float = 0.10
+    task3_yoloe_iou: float = 0.50
+    task3_yoloe_imgsz: int = 1280
+    task3_yoloe_max_det_per_class: int = 5
+    task3_yoloe_verify_every_k: int = 1
+    task3_lightglue_min_matches: int = 15
+    task3_superpoint_max_kpts: int = 1024
+    task3_min_crop_side: int = 24
+    task3_resize_crop_to: int = 256
+    task3_yoloe_match_normalization_scale: int = 50
+    task3_yoloe_min_score: float = 0.4520
+    task3_yoloe_thermal_min_score: float = 0.50
+    task3_yoloe_score_confidence_weight: float = 0.25
+    task3_yoloe_score_matches_weight: float = 0.61
+    task3_yoloe_score_inlier_weight: float = 0.14
+    task3_yoloe_homography_ransac_reproj_threshold: float = 5.0
+    task3_debug_dump_rejects: bool = False
+    task3_debug_dump_dir: Path = field(default_factory=_default_task3_debug_dump_dir)
+    task3_debug_export_keypoints: bool = False
     profiling_gpu_query_cmd: tuple[str, ...] = (
         "nvidia-smi",
         "--query-gpu=memory.used,memory.total",
         "--format=csv,noheader,nounits",
     )
 
-    def resolve_task1_model_path(self, candidate_name: str | None = None) -> Path | None:
-        if candidate_name and candidate_name in self.task1_candidate_paths:
-            return Path(self.task1_candidate_paths[candidate_name])
-        return self.task1_model_path
-
-    def resolve_task1_onnx_path(self, candidate_name: str | None = None) -> Path | None:
-        if candidate_name and candidate_name in self.task1_onnx_candidate_paths:
-            return Path(self.task1_onnx_candidate_paths[candidate_name])
-        return self.task1_onnx_path
-
-    def resolve_task1_trt_path(self, candidate_name: str | None = None) -> Path | None:
-        if candidate_name and candidate_name in self.task1_trt_candidate_paths:
-            return Path(self.task1_trt_candidate_paths[candidate_name])
-        return self.task1_trt_path
-
-    def resolve_task1_export_model_path(self, candidate_name: str) -> Path:
-        return self.task1_export_dir / f"{candidate_name}.onnx"
-
-    def resolve_task1_export_metadata_path(self, candidate_name: str) -> Path:
-        return self.task1_export_dir / f"{candidate_name}.metadata.json"
-
-    def resolve_task1_export_engine_path(self, candidate_name: str) -> Path:
-        return self.task1_export_dir / f"{candidate_name}.engine"
-
-    def resolve_task1_trt_metadata_path(self, candidate_name: str) -> Path:
-        return self.task1_export_dir / f"{candidate_name}.engine.metadata.json"
+    def __post_init__(self) -> None:
+        yoloe_weight_sum = (
+            float(self.task3_yoloe_score_confidence_weight)
+            + float(self.task3_yoloe_score_matches_weight)
+            + float(self.task3_yoloe_score_inlier_weight)
+        )
+        if not math.isclose(yoloe_weight_sum, 1.0, rel_tol=0.0, abs_tol=1e-9):
+            raise ValueError(
+                "task3_yoloe_score_confidence_weight + task3_yoloe_score_matches_weight + "
+                f"task3_yoloe_score_inlier_weight must equal 1.0, got {yoloe_weight_sum:.12f}"
+            )

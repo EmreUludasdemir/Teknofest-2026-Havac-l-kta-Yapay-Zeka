@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(py -3.12 -m unittest tests.test_task3_yoloe_fallback tests.test_task3_manifest_eval tests.test_task3_descriptor_baseline -v)",
+      "Bash(py -3.12 tools/run_task3_manifest_eval.py --output-dir _logs/reports_generated/task3_manifest --run-tag homography_measurement_rgb --scenario-id rgb_reference_session --export-keypoints --allow-cpu-yoloe)"
+    ]
+  }
+}

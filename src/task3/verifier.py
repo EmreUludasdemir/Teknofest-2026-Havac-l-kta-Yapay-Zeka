@@ -43,7 +43,12 @@ def verify_matches(
         inlier_count = int(match.metadata.get("inlier_count", 0))
         inlier_ratio = float(match.metadata.get("inlier_ratio", 0.0))
         score = float(match.metadata.get("match_score", 0.0))
-        if source.startswith("task3_learned_descriptor"):
+        if source.startswith("task3_yoloe_vp_lightglue"):
+            yoloe_info = match.metadata.get("task3_yoloe", {})
+            verify_passed = bool(yoloe_info.get("verify_passed", False))
+            passed = bbox_sane and scale_ok and verify_passed and score >= 0.0
+            match.metadata["verify_passed"] = verify_passed
+        elif source.startswith("task3_learned_descriptor"):
             similarity = float(match.metadata.get("similarity", 0.0))
             corroboration = float(match.metadata.get("corroboration", 0.0))
             passed = bbox_sane and scale_ok and similarity >= min_similarity and score >= 0.70 and corroboration >= min_corroboration

@@ -217,18 +217,22 @@ class FinalSequentialAdapter(SequentialProtocolAdapter):
             "frame": result.frame_url,
             "detected_objects": [],
             "detected_translations": [],
+            "detected_undefined_objects": [],
         }
         for obj in result.detected_objects:
-            payload["detected_objects"].append(
-                {
-                    "cls": f"{self.base_url}classes/{int(obj.class_id) + 1}/",
-                    "landing_status": str(obj.landing_status),
-                    "top_left_x": str(obj.top_left_x),
-                    "top_left_y": str(obj.top_left_y),
-                    "bottom_right_x": str(obj.bottom_right_x),
-                    "bottom_right_y": str(obj.bottom_right_y),
-                }
-            )
+            wire_obj: dict[str, Any] = {
+                "cls": f"{self.base_url}classes/{int(obj.class_id) + 1}/",
+                "landing_status": str(obj.landing_status),
+                "top_left_x": str(obj.top_left_x),
+                "top_left_y": str(obj.top_left_y),
+                "bottom_right_x": str(obj.bottom_right_x),
+                "bottom_right_y": str(obj.bottom_right_y),
+            }
+            # motion_status is only valid for vehicles (class_id=0) with 2026 spec values 0/1
+            if int(obj.class_id) == 0 and obj.motion_status in (0, 1):
+                wire_obj["motion_status"] = str(obj.motion_status)
+            payload["detected_objects"].append(wire_obj)
+
         for translation in result.detected_translations:
             payload["detected_translations"].append(
                 {
@@ -237,6 +241,19 @@ class FinalSequentialAdapter(SequentialProtocolAdapter):
                     "translation_z": str(translation.translation_z),
                 }
             )
+
+        # Task 3: detected_undefined_objects per 2026 spec
+        for uobj in result.detected_undefined_objects:
+            payload["detected_undefined_objects"].append(
+                {
+                    "object_id": str(uobj.object_id),
+                    "top_left_x": str(uobj.top_left_x),
+                    "top_left_y": str(uobj.top_left_y),
+                    "bottom_right_x": str(uobj.bottom_right_x),
+                    "bottom_right_y": str(uobj.bottom_right_y),
+                }
+            )
+
         return payload
 
     def send_wire_prediction(self, payload: dict[str, Any]) -> HttpResponse:
